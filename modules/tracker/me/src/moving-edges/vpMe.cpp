@@ -421,6 +421,7 @@ vpMe::vpMe(const vpMe &me)
 }
 
 //! Copy operator.
+const
 vpMe& vpMe::operator=(const vpMe &me)
 {
   if (mask != NULL) {
@@ -447,6 +448,7 @@ vpMe& vpMe::operator=(const vpMe &me)
 
 #ifdef VISP_HAVE_CPP11_COMPATIBILITY
 //! Move operator.
+const
 vpMe& vpMe::operator=(const vpMe &&me)
 {
   if (mask != NULL) {

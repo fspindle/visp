@@ -488,6 +488,8 @@ public:  /* Methode publiques */
   void stopMotion();
 
 private:
+  void getArticularDisplacement(vpColVector &displacement);
+  void getCameraDisplacement(vpColVector &displacement);
   double maxRotationVelocity_joint6;
 };
 

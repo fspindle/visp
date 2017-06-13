@@ -336,7 +336,21 @@ public:  /* Methode publiques */
                     const vpColVector & velocity);
 
   void stopMotion() ;
+
+private:
+  void getArticularDisplacement(vpColVector &displacement);
+  void getCameraDisplacement(vpColVector &displacement);
 };
+
+
+
+
+
+/*
+ * Local variables:
+ * c-basic-offset: 2
+ * End:
+ */
 
 #endif
 #endif /* #ifndef vpRobotAfma6_h */

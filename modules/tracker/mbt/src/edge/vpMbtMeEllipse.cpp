@@ -63,9 +63,10 @@ vpMbtMeEllipse::vpMbtMeEllipse()
   Copy constructor.
 */
 vpMbtMeEllipse::vpMbtMeEllipse(const vpMbtMeEllipse &meellipse)
-  : vpMeTracker(meellipse), iPc(meellipse.iPc), a(0.), b(0.), e(0.),
+  : vpMeTracker(meellipse), iPc(), a(0.), b(0.), e(0.),
     ce(0.), se(0.), mu11(0.), mu20(0.), mu02(0.), thresholdWeight(0.), expecteddensity(0.)
 {
+  iPc = meellipse.iPc;
   a = meellipse.a;
   b = meellipse.b;
   e = meellipse.e;

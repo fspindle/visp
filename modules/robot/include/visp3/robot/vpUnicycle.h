@@ -101,7 +101,7 @@ public:
   */
   void get_cVe(vpVelocityTwistMatrix &cVe) const
   {
-    cVe = get_cVe();
+    cVe = vpUnicycle::get_cVe();
   }
 
   /*!

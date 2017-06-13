@@ -54,11 +54,13 @@
 
 */
 vpMbtDistanceKltPoints::vpMbtDistanceKltPoints()
-  : H(), N(), N_cur(), invd0(1.), cRc0_0n(), initPoints(std::map<int, vpImagePoint>()),
-    curPoints(std::map<int, vpImagePoint>()), curPointsInd(std::map<int, int>()),
+  : H(), N(), N_cur(), invd0(1.), cRc0_0n(), initPoints(), curPoints(), curPointsInd(),
     nbPointsCur(0), nbPointsInit(0), minNbPoint(4), enoughPoints(false), dt(1.), d0(1.),
     cam(), isTrackedKltPoints(true), polygon(NULL), hiddenface(NULL), useScanLine(false)
 {
+  initPoints = std::map<int, vpImagePoint>();
+  curPoints = std::map<int, vpImagePoint>();
+  curPointsInd = std::map<int, int>();
 }
 
 /*!
@@ -187,7 +189,7 @@ vpMbtDistanceKltPoints::computeInteractionMatrixAndResidu(vpColVector& _R, vpMat
   unsigned int index_ = 0;
 
   std::map<int, vpImagePoint>::const_iterator iter = curPoints.begin();
-  for( ; iter != curPoints.end(); ++iter){
+  for( ; iter != curPoints.end(); iter++){
     int id(iter->first);
     double i_cur(iter->second.get_i()), j_cur(iter->second.get_j());
 
@@ -511,7 +513,7 @@ vpMbtDistanceKltPoints::removeOutliers(const vpColVector& _w, const double &thre
 
   nbPointsCur = 0;
   std::map<int, vpImagePoint>::const_iterator iter = curPoints.begin();
-  for( ; iter != curPoints.end(); ++iter){
+  for( ; iter != curPoints.end(); iter++){
     if(_w[k] > threshold_outlier && _w[k+1] > threshold_outlier){
 //     if(_w[k] > threshold_outlier || _w[k+1] > threshold_outlier){
       tmp[iter->first] = vpImagePoint(iter->second.get_i(), iter->second.get_j());
@@ -543,7 +545,7 @@ void
 vpMbtDistanceKltPoints::displayPrimitive(const vpImage<unsigned char>& _I)
 {
   std::map<int, vpImagePoint>::const_iterator iter = curPoints.begin();
-  for( ; iter != curPoints.end(); ++iter){
+  for( ; iter != curPoints.end(); iter++){
     int id(iter->first);
     vpImagePoint iP;
     iP.set_i(static_cast<double>(iter->second.get_i()));
@@ -568,7 +570,7 @@ void
 vpMbtDistanceKltPoints::displayPrimitive(const vpImage<vpRGBa>& _I)
 {
   std::map<int, vpImagePoint>::const_iterator iter = curPoints.begin();
-  for( ; iter != curPoints.end(); ++iter){
+  for( ; iter != curPoints.end(); iter++){
     int id(iter->first);
     vpImagePoint iP;
     iP.set_i(static_cast<double>(iter->second.get_i()));
@@ -586,7 +588,7 @@ vpMbtDistanceKltPoints::displayPrimitive(const vpImage<vpRGBa>& _I)
 
 void
 vpMbtDistanceKltPoints::display(const vpImage<unsigned char> &I, const vpHomogeneousMatrix &/*cMo*/, const vpCameraParameters &camera,
-                                const vpColor &col, const unsigned int thickness, const bool displayFullModel)
+                                const vpColor col, const unsigned int thickness, const bool displayFullModel)
 {
     if( (polygon->isVisible() && isTrackedKltPoints) || displayFullModel)
     {
@@ -625,7 +627,7 @@ vpMbtDistanceKltPoints::display(const vpImage<unsigned char> &I, const vpHomogen
 
 void
 vpMbtDistanceKltPoints::display(const vpImage<vpRGBa> &I, const vpHomogeneousMatrix &/*cMo*/, const vpCameraParameters &camera,
-                                const vpColor &col, const unsigned int thickness, const bool displayFullModel)
+                                const vpColor col, const unsigned int thickness, const bool displayFullModel)
 {
   if( (polygon->isVisible() && isTrackedKltPoints) || displayFullModel)
   {

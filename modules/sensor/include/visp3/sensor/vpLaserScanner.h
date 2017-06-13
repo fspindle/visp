@@ -61,8 +61,10 @@ class VISP_EXPORT vpLaserScanner
     vpLaserScanner() : ip("null"), port(0) {};
   /*! Copy constructor. */
   vpLaserScanner(const vpLaserScanner &scanner)
-    : ip(scanner.ip), port(scanner.port)
+    : ip("null"), port(0)
   {
+    ip = scanner.ip;
+    port = scanner.port;
   };
   /*! Default destructor that does nothing. */
   virtual ~vpLaserScanner() {};

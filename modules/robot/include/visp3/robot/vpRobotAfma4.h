@@ -282,6 +282,10 @@ public:  /* Methode publiques */
                     const vpColVector & velocity);
 
   void stopMotion() ;
+
+private:
+  void getArticularDisplacement(vpColVector &displacement);
+  void getCameraDisplacement(vpColVector &displacement);
 };
 
 #endif

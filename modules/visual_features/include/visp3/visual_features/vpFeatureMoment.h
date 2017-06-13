@@ -180,7 +180,7 @@ public:
       moments(data_base),
       featureMomentsDataBase(featureMoments),
       interaction_matrices(nbmatrices),
-      A(A_),B(B_),C(C_),_name()
+      A(A_),B(B_),C(C_)
   {}
 
   virtual ~vpFeatureMoment();

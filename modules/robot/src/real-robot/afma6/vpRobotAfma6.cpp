@@ -2241,6 +2241,41 @@ vpRobotAfma6::closeGripper()
 
 /*!
 
+  Get the robot displacement expressed in the camera frame since the last call
+  of this method.
+
+  \param displacement : The measured displacement in camera frame. The
+  dimension of \e displacement is 6 (tx, ty, ty, rx, ry,
+  rz). Translations are expressed in meters, rotations in radians with
+  the Euler Rxyz representation.
+
+  \sa getDisplacement(), getArticularDisplacement()
+
+*/
+void
+vpRobotAfma6::getCameraDisplacement(vpColVector &displacement)
+{
+  getDisplacement(vpRobot::CAMERA_FRAME, displacement);
+}
+/*!
+
+  Get the robot articular displacement since the last call of this method.
+
+  \param displacement : The measured articular displacement. The
+  dimension of \e displacement is 6 (the number of axis of the
+  robot). Translations are expressed in meters, rotations in radians.
+
+  \sa getDisplacement(), getCameraDisplacement()
+
+*/
+void
+vpRobotAfma6::getArticularDisplacement(vpColVector  &displacement)
+{
+  getDisplacement(vpRobot::ARTICULAR_FRAME, displacement);
+}
+
+/*!
+
   Get the robot displacement since the last call of this method.
 
   \warning This functionnality is not implemented for the moment in the
@@ -2255,6 +2290,8 @@ vpRobotAfma6::closeGripper()
 
   In camera or reference frame, rotations are expressed with the
   Euler Rxyz representation.
+
+  \sa getArticularDisplacement(), getCameraDisplacement()
 
 */
 void

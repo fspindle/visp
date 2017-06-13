@@ -48,7 +48,6 @@ vpDiskGrabber::vpDiskGrabber()
   setDirectory("/tmp");
   setBaseName("I");
   setExtension("pgm");
-  sprintf(genericName, "empty");
 
   init = false;
 }
@@ -92,7 +91,6 @@ vpDiskGrabber::vpDiskGrabber(const char *dir, const char *basename,
   setDirectory(dir);
   setBaseName(basename);
   setExtension(ext);
-  sprintf(genericName, "empty");
 
   init = false;
 }

@@ -132,6 +132,10 @@ public:
   void setVelocity (const vpRobot::vpControlFrameType frame, const vpColVector & q_dot);
 
   void stopMotion() ;
+
+private:
+  void getCameraDisplacement(vpColVector &d);
+  void getArticularDisplacement(vpColVector &d);
 };
 
 
