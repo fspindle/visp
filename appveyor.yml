@@ -24,7 +24,3 @@ build_script:
 #  - ctest
 
 
-
-skip_commits:
-message: /.*\[skip appveyor\].*/
-
