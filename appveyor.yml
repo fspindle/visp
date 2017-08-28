@@ -1,0 +1,30 @@
+# Specify version format
+version: "{build}"
+
+os: Visual Studio 2015
+
+# scripts that are called at very beginning, before repo cloning
+init:
+  - cmd: cmake --version
+  - cmd: msbuild /version
+
+# clone directory
+clone_folder: C:\visp
+
+# Boost is already installed on AppVeyor.
+environment:
+  BOOST_ROOT: C:\Libraries\boost_1_59_0
+  BOOST_LIBRARYDIR: C:\Libraries\boost_1_59_0\lib64-msvc-14.0
+
+build_script:
+  - md C:\visp\build
+  - cd C:\visp\build
+  - cmake -G "Visual Studio 14 2015 Win64" ..
+  - cmake --build . --config Release
+#  - ctest
+
+
+
+skip_commits:
+message: /.*\[skip appveyor\].*/
+
