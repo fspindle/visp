@@ -9,13 +9,12 @@ init:
   - cmd: msbuild /version
 
 install:
-  # All external dependencies are installed in C:\projects\deps
-  - mkdir C:\projects\deps
-  - cd C:\projects\deps
+  # All external dependencies are installed in C:\projects\3rdparty
+  - mkdir C:\projects\3rdparty
+  - cd C:\projects\3rdparty
 
 # clone directory
-clone_folder: C:\projects\visp
-
+clone_folder: C:\projects\visp\visp
 
 build_script:
   - md C:\projects\visp\build
