@@ -20,7 +20,7 @@ build_script:
   - md C:\projects\visp\build
   - cd C:\projects\visp\build
   - cmake -G "Visual Studio 14 2015 Win64" ..\visp
-  - cmake --build ..\visp --config Release --target visp_modules
+  - cmake --build . --config Release —target visp_modules
 #  - ctest
 
 
