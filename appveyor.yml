@@ -14,10 +14,13 @@ install:
   - cd C:\projects\deps
 
   # visp-images
-  - set VISP_IMAGES_URL="http://visp-doc.inria.fr/download/dataset/ViSP-images-3.0.1.zip"
-  - appveyor DownloadFile %VISP_IMAGES_URL% -FileName visp-images.zip
-  - 7z x visp-images.zip -oC:\projects\deps\visp-images > nul
-  - set VISP_INPUT_IMAGE_PATH=C:\projects\deps\visp-images\ViSP-images-3.0.1
+#  - set VISP_IMAGES_URL="http://visp-doc.inria.fr/download/dataset/ViSP-images-3.0.1.zip"
+#  - appveyor DownloadFile %VISP_IMAGES_URL% -FileName visp-images.zip
+#  - 7z x visp-images.zip -oC:\projects\deps\visp-images > nul
+#  - set VISP_INPUT_IMAGE_PATH=C:\projects\deps\visp-images\ViSP-images-3.0.1
+
+  - git clone https://github.com/lagadic/ViSP-images C:\projects\deps\visp-images
+  - set VISP_INPUT_IMAGE_PATH=C:\projects\deps\visp-images
 
 # clone directory
 clone_folder: C:\projects\visp\visp
