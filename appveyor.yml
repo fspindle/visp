@@ -13,6 +13,9 @@ init:
   - cmd: msbuild /version
 
 install:
+  # Create temp dir to collect test outputs
+  - md C:\temp
+
   # All external dependencies are installed in C:\projects\deps
   - mkdir C:\projects\deps
   - cd C:\projects\deps
