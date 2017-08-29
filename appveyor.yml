@@ -36,14 +36,14 @@ before_build:
   # setup visp
   - cmd: SET VISP_DLL_DIR=C:\projects\visp\build\install\%ARCH%\vc14\bin
   - cmd: SET PATH=%VISP_DLL_DIR%;%PATH%
-  - cmd: SET VISP_INPUT_IMAGE_PATH=C:\projects\deps
+#  - cmd: SET VISP_INPUT_IMAGE_PATH=C:\projects\deps
   
   # setup opencv
 #  - cmd: IF EXIST C:\OpenCV* CD C:\OpenCV*
 #  - cmd: SET OPENCV_ROOT_PATH=%CD%\opencv
-#  - cmd: SET OPENCV_DIR=%OPENCV_ROOT_PATH%\build
-#  - cmd: SET OPENCV_DLL_DIR=%OPENCV_ROOT_PATH%\build\%ARCH%\vc14\bin
-#  - cmd: SET PATH=%OPENCV_DLL_DIR%;%PATH%
+  - cmd: SET OpenCV_DIR=C:\tools\opencv\build
+  - cmd: SET OpenCV_DLL_DIR=%OpenCV_DIR%\build\%ARCH%\vc14\bin
+  - cmd: SET PATH=%OPENCV_DLL_DIR%;%PATH%
 #  - cmd: ECHO %OPENCV_DLL_DIR%
 #  - dir %OPENCV_DLL_DIR%
 
@@ -63,7 +63,6 @@ build_script:
   - dir C:\projects\visp\build\install\x64\vc14\bin
   - dir C:\projects\visp\build\modules\core
   - dir C:\projects\visp\build\modules\core\Release
-  - C:\projects\visp\build\modules\core\Release\testIoPGM -i C:\projects\deps
-  - C:\projects\visp\build\modules\core\Release\testIoPGM
+  - C:\projects\visp\build\modules\core\Release\testConversion
 
 
