@@ -1,7 +1,12 @@
 # Specify version format
-version: "{build}"
+version: "3.1.0-{build}"
 
 os: Visual Studio 2015
+
+# specify custom environment variables
+environment:
+  VISP_SOURCE_DIR: C:\projects\visp\visp
+  VISP_BUILD_DIR: C:\projects\visp\build
 
 # scripts that are called at very beginning, before repo cloning
 init:
@@ -14,12 +19,12 @@ install:
   - cd C:\projects\3rdparty
 
 # clone directory
-clone_folder: C:\projects\visp\visp
+clone_folder: %VISP_SOURCE_DIR%
 
 build_script:
-  - md C:\projects\visp\build
-  - cd C:\projects\visp\build
-  - cmake -G "Visual Studio 14 2015 Win64" ..\visp
+  - md %VISP_BUILD_DIR%
+  - cd %VISP_BUILD_DIR%
+  - cmake -G "Visual Studio 14 2015 Win64" %VISP_SOURCE_DIR%
   - cmake --build . --config Release --target visp_modules
 #  - ctest
 
