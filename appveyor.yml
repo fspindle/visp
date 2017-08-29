@@ -23,7 +23,7 @@ install:
 
   # opencv
   - cmd: ECHO "INSTALL OPENCV:"
-  - cmd: choco install OpenCV /InstallationPath:C:\projects\deps
+  - cmd: choco /InstallationPath:C:\projects\deps install OpenCV
 
 # visp clone directory
 clone_folder: C:\projects\visp\visp
