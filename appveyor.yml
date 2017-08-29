@@ -48,10 +48,9 @@ build_script:
   - dir C:\tools\opencv\build\%ARCH%\vc14\bin
   - md C:\projects\visp\build
   - cd C:\projects\visp\build
-  - cmake -G "Visual Studio 14 2015 Win64" ..\visp -DBUILD_EXAMPLES=OFF -DBUILD_TUTORIALS=OFF -DBUILD_DEMOS=OFF -DBUILD_MODULE_visp_ar=OFF -DBUILD_MODULE_visp_blob=OFF -DBUILD_MODULE_visp_detection=ON -DBUILD_MODULE_visp_klt=OFF -DBUILD_MODULE_visp_mbt=OFF -DBUILD_MODULE_visp_tt=OFF -DBUILD_MODULE_visp_vision=OFF -DBUILD_MODULE_visp_vs=OFF -DBUILD_MODULE_visp_visual_features=OFF -DBUILD_MODULE_visp_robot=OFF -DBUILD_MODULE_visp_sensor=OFF -DBUILD_MODULE_visp_me=OFF -DWITH_APRILTAG=OFF -DWITH_CLIPPER=OFF -DWITH_PTHREAD=OFF
+  - cmake -G "Visual Studio 14 2015 Win64" ..\visp
   - cmake --build . --config Release --target install
   - ctest
 #  - C:\projects\visp\build\modules\core\Release\testIoPGM
-#  - C:\projects\visp\build\modules\core\Release\testConversion
 
 
