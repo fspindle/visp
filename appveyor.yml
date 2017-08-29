@@ -55,8 +55,8 @@ build_script:
   - cmake -G "Visual Studio 14 2015 Win64" ..\visp -DBUILD_EXAMPLES=OFF -DBUILD_TUTORIALS=OFF -DBUILD_DEMOS=OFF -DBUILD_MODULE_visp_ar=OFF -DBUILD_MODULE_visp_blob=OFF -DBUILD_MODULE_visp_detection=OFF -DBUILD_MODULE_visp_klt=OFF -DBUILD_MODULE_visp_mbt=OFF -DBUILD_MODULE_visp_tt=OFF -DBUILD_MODULE_visp_vision=OFF -DBUILD_MODULE_visp_vs=OFF -DBUILD_MODULE_visp_visual_features=OFF -DBUILD_MODULE_visp_robot=OFF -DBUILD_MODULE_visp_sensor=OFF -DBUILD_MODULE_visp_me=OFF 
 #  - cmake --build . --config Release --target visp_modules
   - cmake --build . --config Release --target install
-  - ctest
-#  - dir C:\projects\visp\build\install\%ARCH%\vc14\bin
+#  - ctest
+  - dir C:\projects\visp\build\install\x64\vc14\bin
   - dir C:\projects\visp\build\modules\core
   - dir C:\projects\visp\build\modules\core\Release
   - dir C:\projects\visp\build\modules\core\Release\testIoPGM
