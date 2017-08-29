@@ -23,11 +23,14 @@ install:
 clone_folder: C:\projects\visp\visp
 
 build_script:
+  - dir C:\projects\deps
+  - dir C:\projects\deps\visp-images
+  - echo %VISP_INPUT_IMAGE_PATH%
   - md C:\projects\visp\build
   - cd C:\projects\visp\build
-  - cmake -G "Visual Studio 14 2015 Win64" ..\visp -DBUILD_EXAMPLES=OFF -DBUILD_TUTORIALS=OFF -DBUILD_DEMOS=OFF
-#  - cmake --build . --config Release --target visp_modules
-  - cmake --build . --config Release
-  - ctest
+#  - cmake -G "Visual Studio 14 2015 Win64" ..\visp -DBUILD_EXAMPLES=OFF -DBUILD_TUTORIALS=OFF -DBUILD_DEMOS=OFF
+##  - cmake --build . --config Release --target visp_modules
+#  - cmake --build . --config Release
+#  - ctest
 
 
