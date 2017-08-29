@@ -29,7 +29,8 @@ install:
 
   # zbar
   - cmd: choco install zbar
-  - dir C:\tools\zbar
+  - dir C:\Program Files (x86)\ZBar
+  - dir C:\Program Files (x86)\ZBar\bin
 
 # visp clone directory
 clone_folder: C:\projects\visp\visp
