@@ -46,7 +46,8 @@ before_build:
 build_script:
   - dir C:\projects\deps
   - dir C:\tools
-  - dir C:\tools\opencv\build\install\%ARCH%\vc14\bin
+  - dir C:\tools\opencv
+#  - dir C:\tools\opencv\build\install\%ARCH%\vc14\bin
   - echo %VISP_INPUT_IMAGE_PATH%
   - dir %VISP_INPUT_IMAGE_PATH%
   - md C:\projects\visp\build
