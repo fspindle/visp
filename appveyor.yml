@@ -21,8 +21,8 @@ install:
   - cd C:\projects\deps
 
   # visp-images
-  - git clone https://github.com/lagadic/ViSP-images C:\projects\deps\visp-images
-  - set VISP_INPUT_IMAGE_PATH=C:\projects\deps\visp-images
+  - git clone https://github.com/lagadic/ViSP-images C:\projects\deps\ViSP-images
+  - set VISP_INPUT_IMAGE_PATH=C:\projects\deps
 
   # opencv
   - cmd: ECHO "INSTALL OPENCV:"
@@ -36,7 +36,7 @@ before_build:
   # setup visp
   - cmd: SET VISP_DLL_DIR=C:\projects\visp\build\install\%ARCH%\vc14\bin
   - cmd: SET PATH=%VISP_DLL_DIR%;%PATH%
-  - cmd: SET VISP_INPUT_IMAGE_PATH=C:\projects\deps\visp-images
+  - cmd: SET VISP_INPUT_IMAGE_PATH=C:\projects\deps
   
   # setup opencv
 #  - cmd: IF EXIST C:\OpenCV* CD C:\OpenCV*
@@ -63,6 +63,7 @@ build_script:
   - dir C:\projects\visp\build\install\x64\vc14\bin
   - dir C:\projects\visp\build\modules\core
   - dir C:\projects\visp\build\modules\core\Release
-  - C:\projects\visp\build\modules\core\Release\testIoPGM -i C:\projects\deps\visp-images
+  - C:\projects\visp\build\modules\core\Release\testIoPGM -i C:\projects\deps
+  - C:\projects\visp\build\modules\core\Release\testIoPGM
 
 
