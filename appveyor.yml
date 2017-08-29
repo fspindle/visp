@@ -42,7 +42,7 @@ before_build:
 #  - cmd: IF EXIST C:\OpenCV* CD C:\OpenCV*
 #  - cmd: SET OPENCV_ROOT_PATH=%CD%\opencv
   - cmd: SET OpenCV_DIR=C:\tools\opencv\build
-  - cmd: SET OpenCV_DLL_DIR=%OpenCV_DIR%\build\%ARCH%\vc14\bin
+  - cmd: SET OpenCV_DLL_DIR=%OpenCV_DIR%\%ARCH%\vc14\bin
   - cmd: SET PATH=%OPENCV_DLL_DIR%;%PATH%
 #  - cmd: ECHO %OPENCV_DLL_DIR%
 #  - dir %OPENCV_DLL_DIR%
