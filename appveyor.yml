@@ -21,12 +21,15 @@ install:
   - cd C:\projects\deps
 
   # visp-images
-  - git clone https://github.com/lagadic/ViSP-images C:\projects\deps\ViSP-images
+#  - git clone https://github.com/lagadic/ViSP-images C:\projects\deps\ViSP-images
   - set VISP_INPUT_IMAGE_PATH=C:\projects\deps
 
   # opencv
-  - cmd: ECHO "INSTALL OPENCV:"
-  - cmd: choco install OpenCV
+#  - cmd: choco install OpenCV
+
+  # zbar
+  - cmd: choco install zbar
+  - dir C:\tools\zbar
 
 # visp clone directory
 clone_folder: C:\projects\visp\visp
@@ -36,31 +39,22 @@ before_build:
   # setup visp
   - cmd: SET VISP_DLL_DIR=C:\projects\visp\build\install\%ARCH%\vc14\bin
   - cmd: SET PATH=%VISP_DLL_DIR%;%PATH%
-#  - cmd: SET VISP_INPUT_IMAGE_PATH=C:\projects\deps
   
   # setup opencv
-#  - cmd: IF EXIST C:\OpenCV* CD C:\OpenCV*
-#  - cmd: SET OPENCV_ROOT_PATH=%CD%\opencv
   - cmd: SET OpenCV_DIR=C:\tools\opencv\build
   - cmd: SET OpenCV_DLL_DIR=%OpenCV_DIR%\%ARCH%\vc14\bin
   - cmd: SET PATH=%OPENCV_DLL_DIR%;%PATH%
-#  - cmd: ECHO %OPENCV_DLL_DIR%
-#  - dir %OPENCV_DLL_DIR%
 
 build_script:
   - echo %PATH%
   - dir C:\projects\deps
   - dir C:\tools
-  - dir C:\tools\opencv
   - dir C:\tools\opencv\build\%ARCH%\vc14\bin
-  - echo %VISP_INPUT_IMAGE_PATH%
-  - dir %VISP_INPUT_IMAGE_PATH%
   - md C:\projects\visp\build
   - cd C:\projects\visp\build
-  - cmake -G "Visual Studio 14 2015 Win64" ..\visp -DBUILD_EXAMPLES=OFF -DBUILD_TUTORIALS=OFF -DBUILD_DEMOS=OFF -DBUILD_MODULE_visp_ar=OFF -DBUILD_MODULE_visp_blob=OFF -DBUILD_MODULE_visp_detection=OFF -DBUILD_MODULE_visp_klt=OFF -DBUILD_MODULE_visp_mbt=OFF -DBUILD_MODULE_visp_tt=OFF -DBUILD_MODULE_visp_vision=OFF -DBUILD_MODULE_visp_vs=OFF -DBUILD_MODULE_visp_visual_features=OFF -DBUILD_MODULE_visp_robot=OFF -DBUILD_MODULE_visp_sensor=OFF -DBUILD_MODULE_visp_me=OFF -DWITH_APRILTAG=OFF -DWITH_CLIPPER=OFF -DWITH_PTHREAD=OFF
-#  - cmake --build . --config Release --target visp_modules
-  - cmake --build . --config Release --target install
-#  - ctest
+#  - cmake -G "Visual Studio 14 2015 Win64" ..\visp -DBUILD_EXAMPLES=OFF -DBUILD_TUTORIALS=OFF -DBUILD_DEMOS=OFF -DBUILD_MODULE_visp_ar=OFF -DBUILD_MODULE_visp_blob=OFF -DBUILD_MODULE_visp_detection=ON -DBUILD_MODULE_visp_klt=OFF -DBUILD_MODULE_visp_mbt=OFF -DBUILD_MODULE_visp_tt=OFF -DBUILD_MODULE_visp_vision=OFF -DBUILD_MODULE_visp_vs=OFF -DBUILD_MODULE_visp_visual_features=OFF -DBUILD_MODULE_visp_robot=OFF -DBUILD_MODULE_visp_sensor=OFF -DBUILD_MODULE_visp_me=OFF -DWITH_APRILTAG=OFF -DWITH_CLIPPER=OFF -DWITH_PTHREAD=OFF
+#  - cmake --build . --config Release --target install
+##  - ctest
   - dir C:\projects\visp\build\install\x64\vc14\bin
   - dir C:\projects\visp\build\modules\core
   - dir C:\projects\visp\build\modules\core\Release
