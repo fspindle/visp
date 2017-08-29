@@ -36,6 +36,7 @@ before_build:
   # setup visp
   - cmd: SET VISP_DLL_DIR=C:\projects\visp\build\install\%ARCH%\vc14\bin
   - cmd: SET PATH=%VISP_DLL_DIR%;%PATH%
+  - cmd: SET VISP_INPUT_IMAGE_PATH=C:\projects\deps\visp-images
   
   # setup opencv
 #  - cmd: IF EXIST C:\OpenCV* CD C:\OpenCV*
