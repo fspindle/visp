@@ -23,7 +23,7 @@ install:
 
   # opencv
   - cmd: ECHO "INSTALL OPENCV:"
-  - cmd: choco install OpenCV
+  - cmd: choco install OpenCV /InstallationPath:C:\projects\deps
 
 # visp clone directory
 clone_folder: C:\projects\visp\visp
@@ -35,16 +35,18 @@ before_build:
   - cmd: SET PATH=%VISP_DLL_DIR%;%PATH%
   
   # setup opencv
-  - cmd: IF EXIST C:\OpenCV* CD C:\OpenCV*
-  - cmd: SET OPENCV_ROOT_PATH=%CD%\opencv
-  - cmd: SET OPENCV_DIR=%OPENCV_ROOT_PATH%\build
-  - cmd: SET OPENCV_DLL_DIR=%OPENCV_ROOT_PATH%\build\%ARCH%\vc14\bin
-  - cmd: SET PATH=%OPENCV_DLL_DIR%;%PATH%
-  - cmd: ECHO %OPENCV_DLL_DIR%
-  - dir %OPENCV_DLL_DIR%
+#  - cmd: IF EXIST C:\OpenCV* CD C:\OpenCV*
+#  - cmd: SET OPENCV_ROOT_PATH=%CD%\opencv
+#  - cmd: SET OPENCV_DIR=%OPENCV_ROOT_PATH%\build
+#  - cmd: SET OPENCV_DLL_DIR=%OPENCV_ROOT_PATH%\build\%ARCH%\vc14\bin
+#  - cmd: SET PATH=%OPENCV_DLL_DIR%;%PATH%
+#  - cmd: ECHO %OPENCV_DLL_DIR%
+#  - dir %OPENCV_DLL_DIR%
 
 build_script:
   - dir C:\projects\deps
+  - dir C:\projects\deps\opencv
+  - dir C:\projects\deps\opencv\build\install\%ARCH%\vc14\bin
   - echo %VISP_INPUT_IMAGE_PATH%
   - dir %VISP_INPUT_IMAGE_PATH%
   - md C:\projects\visp\build
