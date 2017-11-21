@@ -271,8 +271,11 @@
 // Defined if libusb-1.0 library available.
 #cmakedefine VISP_HAVE_LIBUSB_1
 
-// Defined if RealSense library available.
+// Defined if RealSense SDK 1.0 library available.
 #cmakedefine VISP_HAVE_REALSENSE
+
+// Defined if RealSense SDK 2.0 library available.
+#cmakedefine VISP_HAVE_REALSENSE2
 
 // Defined if raw1394 and dc1394-2.x libraries available.
 #cmakedefine VISP_HAVE_DC1394
