@@ -55,6 +55,7 @@ set(example_cpp
   franka_joint_point_to_point_motion.cpp
   franka_motion_with_control.cpp
   franka_print_joint_positions.cpp
+  servoFranka.cpp
 )
 
 foreach(cpp ${example_cpp})
