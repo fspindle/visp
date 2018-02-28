@@ -47,6 +47,8 @@
 */
 
 #include <iostream>
+#include <vector>
+#include <unistd.h> // TODO: remove
 
 #include <visp3/core/vpConfig.h>
 
@@ -57,17 +59,61 @@
 int main(int argc, char **argv)
 {
   if (argc != 2) {
-    std::cerr << "Usage: ./echo_robot_state <robot-hostname>" << std::endl;
+    std::cerr << "Usage: ./" << argv[0] << " <robot-hostname>" << std::endl;
     return -1;
   }
 
   try {
+    {
+      vpColVector qd_d(7, 0);
+      vpRobotFranka robot;
+      robot.connect(argv[1]);
+      robot.setRobotState(vpRobot::STATE_VELOCITY_CONTROL);
+
+      double t0 = vpTime::measureTimeSecond();
+//    qd_d[5] = vpMath::rad(-10.);
+      qd_d[6] = vpMath::rad(10.);
+      std::cout << "DBG: main() new vel sent to thread: " << qd_d.t() << std::endl;
+      do {
+        robot.setVelocity(vpRobot::JOINT_STATE, qd_d);
+        vpTime::wait(10);
+      } while (vpTime::measureTimeSecond() - t0 < 4.);
+//      usleep(1*1000000);
+      qd_d[5] = vpMath::rad(10.);
+      qd_d[6] = vpMath::rad(10.);
+      std::cout << "DBG: main() new vel sent to thread: " << qd_d.t() << std::endl;
+      robot.setVelocity(vpRobot::JOINT_STATE, qd_d);
+      usleep(1*1000000);
+//      qd_d[6] = 0;
+//      std::cout << "DBG: main() new vel sent to thread: " << qd_d.t() << std::endl;
+//      robot.setVelocity(vpRobot::JOINT_STATE, qd_d);
+//      usleep(0.1*1000000);
+      std::cout << "DBG: main() ask to stop the robot: " << qd_d.t() << std::endl;
+      robot.setRobotState(vpRobot::STATE_STOP);
+
+//      for (int i = 0; i < 5; i++) {
+//        qd_d[0] += 0.1;
+//        robot.setVelocity(vpRobot::JOINT_STATE, qd_d);
+//      }
+      std::cout << "End test" << std::endl;
+      return 0;
+    }
+
     // Test 1
     std::cout << "Start test 1" << std::endl;
     vpRobotFranka robot;
     robot.connect(argv[1]);
 
-    vpColVector q;
+//    // Set additional parameters always before the control loop, NEVER in the
+//    // control loop! Set collision behavior.
+//    franka::Robot *handler = robot.getHandler();
+//    handler->setCollisionBehavior({{10.0, 10.0, 9.0, 9.0, 8.0, 7.0, 6.0}}, {{10.0, 10.0, 9.0, 9.0, 8.0, 7.0, 6.0}},
+//                               {{10.0, 10.0, 9.0, 9.0, 8.0, 7.0, 6.0}}, {{10.0, 10.0, 9.0, 9.0, 8.0, 7.0, 6.0}},
+//                               {{10.0, 10.0, 10.0, 12.5, 12.5, 12.5}}, {{10.0, 10.0, 10.0, 12.5, 12.5, 12.5}},
+//                               {{10.0, 10.0, 10.0, 12.5, 12.5, 12.5}}, {{10.0, 10.0, 10.0, 12.5, 12.5, 12.5}});
+
+
+    vpColVector q(7);
 
     for (unsigned i = 0; i < 10; i++) {
       robot.getPosition(vpRobot::JOINT_STATE, q);
@@ -79,6 +125,31 @@ int main(int argc, char **argv)
     robot.getPosition(vpRobot::END_EFFECTOR_FRAME, fPe);
     std::cout << "fMe pose vector: " << fPe.t() << std::endl;
     std::cout << "fMe pose matrix: \n" << vpHomogeneousMatrix(fPe) << std::endl;
+
+    // Move last joint +10 deg
+    q[q.size() - 1] += vpMath::rad(10);
+
+//    q[0] = 0;
+//    q[1] = -M_PI_4;
+//    q[2] = 0;
+//    q[3] = -3 * M_PI_4;
+//    q[4] = 0;
+//    q[5] = M_PI_2;
+//    q[6] = M_PI_4;
+    std::cout << "Move to joint position: " << q.t() << std::endl;
+    robot.setPosition(vpRobot::JOINT_STATE, q);
+
+    robot.getPosition(vpRobot::JOINT_STATE, q);
+    std::cout << "Reached joint position: " << q.t() << std::endl;
+
+    // Move last joint -10 deg
+    std::cout << "Move to joint position: " << q.t() << std::endl;
+    q[q.size() - 1] -= vpMath::rad(10);
+    robot.setPosition(vpRobot::JOINT_STATE, q);
+
+    robot.getPosition(vpRobot::JOINT_STATE, q);
+    std::cout << "Reached joint position: " << q.t() << std::endl;
+
 
   }
   catch(const vpException &e) {
@@ -122,54 +193,16 @@ int main(int argc, char **argv)
     }
     std::cout << "eeMk: \n" << eeMk << std::endl;
 
-    std::cout << "Start read callback" << std::endl;
-    size_t count = 0;
-    handler->read([&count](const franka::RobotState &robot_state) {
-      // Printing to std::cout adds a delay. This is acceptable for a read
-      // loop such as this, but should not be done in a control loop.
-      std::cout << "Robot state:\n" << robot_state << std::endl;
-      return false;
-    });
+//    std::cout << "Start read callback" << std::endl;
+//    size_t count = 0;
+//    handler->read([&count](const franka::RobotState &robot_state) {
+//      // Printing to std::cout adds a delay. This is acceptable for a read
+//      // loop such as this, but should not be done in a control loop.
+//      std::cout << "Robot state:\n" << robot_state << std::endl;
+//      return false;
+//    });
 
-    // Set Joint position
-    std::cout << "Set joint position" << std::endl;
-#if 0
-    auto initial_position = handler->readOnce().q_d;
-    franka::JointPositions qd = {{initial_position[0], initial_position[1], initial_position[2],
-                                  initial_position[3], initial_position[4],
-                                  initial_position[5], initial_position[6] + vpMath::rad(10)}};
 
-    double time = 0.0;
-    handler->control([=, &time](const franka::RobotState &, franka::Duration time_step) -> franka::JointPositions {
-      time += time_step.toSec();
-
-      return qd;
-    });
-#endif
-
-#if 1
-    handler->stop();
-    auto initial_position = handler->readOnce().q_d;
-    double time = 0.0;
-    std::cout << "Start control thread" << std::endl;
-    handler->control([=, &time](const franka::RobotState &, franka::Duration time_step) -> franka::JointPositions {
-      time += time_step.toSec();
-
-      double delta_angle = M_PI / 8 * (1 - std::cos(M_PI / 5.0 * time));
-
-      franka::JointPositions output = {{initial_position[0], initial_position[1], initial_position[2],
-                                        initial_position[3] + delta_angle, initial_position[4] + delta_angle,
-                                        initial_position[5], initial_position[6] + delta_angle}};
-
-      if (time >= 10.0) {
-        std::cout << std::endl << "Finished motion, shutting down example" << std::endl;
-        return franka::MotionFinished(output);
-      }
-      std::cout << "In the control thread, time: " << time << std::endl;
-      return output;
-    });
-    std::cout << "After start control thread" << std::endl;
-#endif
 #if 0
 
     double time_max = 4.0;
@@ -191,6 +224,57 @@ int main(int argc, char **argv)
     });
 #endif
 
+#if 0
+    // Set Joint velocity
+    std::cout << "Set joint velocity" << std::endl;
+    double time_max = 4.0;
+    double time = 0.0;
+
+    size_t njoints = 7;
+    std::vector<double> q(njoints);
+    std::vector<double> q_min(njoints);
+    std::vector<double> q_max(njoints);
+    std::vector<double> q_dot_max(njoints);
+    std::vector<double> q_dot_dot_max(njoints);
+    float delta_t = 0.001;
+
+    std::array<double, 7> initial_position = handler->readOnce().q_d;
+
+    for (size_t i=0; i<njoints; i++) {
+      q[i] = initial_position[i];
+      q_dot_dot_max[i] = 0.087; // 10 deg/s atteint en 2 s
+      q_dot_max[i] = 3.1415/2.; // 90 deg/s
+      q_min[i] = -1.57;   // Butee min
+      q_max[i] =  1.57;   // Butee max
+    }
+    // Test
+    q_min[1] = -1.57/2.;   // Butee min
+    q_max[1] =  1.57/2.;   // Butee max
+
+    std::vector<double> q_dot(njoints);
+    for(size_t i=0; i<q_dot.size();i++)
+      q_dot[i] = 0;
+    q_dot[6] = -0.1;
+
+
+    vpTrajectoryGenerator traj;
+    traj.init(q, q_min, q_max, q_dot_max, q_dot_dot_max, delta_t);
+
+    handler->control([=, &time, &traj](const franka::RobotState &, franka::Duration time_step) -> franka::JointVelocities {
+      time += time_step.toSec();
+
+      std::vector<double> q = traj.applyVel(q_dot);
+
+//      franka::JointVelocities velocities = {{0.0, 0.0, 0.0, 0.0, 0.0, 0.0, q[6]}};
+      franka::JointVelocities velocities = {{q[0], q[1], q[2], q[3], q[4], q[5], q[6]}};
+
+      if (time >= 2 * time_max) {
+        std::cout << std::endl << "Finished motion, shutting down example" << std::endl;
+        return franka::MotionFinished(velocities);
+      }
+      return velocities;
+    });
+#endif
   }
   catch(const vpException &e) {
     std::cout << "Exception: " << e.what() << std::endl;

@@ -67,20 +67,21 @@ void calculateSynchronizedValues(const std::array<double, 7> &delta_q, const std
 
 int main(int argc, char **argv)
 {
-  if (argc != 10) {
-    std::cerr << "Usage: ./generate_joint_pose_motion "
-              << "<robot-hostname> <goal-position> <speed-factor>" << std::endl
-              << "speed-factor must be between zero and one." << std::endl;
-    return -1;
-  }
+//  if (argc != 10) {
+//    std::cerr << "Usage: ./generate_joint_pose_motion "
+//              << "<robot-hostname> <goal-position> <speed-factor>" << std::endl
+//              << "speed-factor must be between zero and one." << std::endl;
+//    return -1;
+//  }
 
   try {
     franka::Robot robot(argv[1]);
     std::array<double, 7> q_goal;
-    for (size_t i = 0; i < 7; i++) {
-      q_goal[i] = std::stod(argv[i + 2]);
-    }
-    double speed_factor = std::stod(argv[9]);
+//    for (size_t i = 0; i < 7; i++) {
+//      q_goal[i] = std::stod(argv[i + 2]);
+//    }
+//    double speed_factor = 0.1;// = std::stod(argv[9]);
+    double speed_factor = 0.1;
 
     // Set additional parameters always before the control loop, NEVER in the
     // control loop! Set collision behavior.
@@ -91,6 +92,11 @@ int main(int argc, char **argv)
         {{10.0, 10.0, 10.0, 10.0, 10.0, 10.0}}, {{10.0, 10.0, 10.0, 10.0, 10.0, 10.0}});
 
     std::array<double, 7> q_start = robot.readOnce().q_d;
+
+    for (size_t i = 0; i < 7; i++) {
+      q_goal[i] = q_start[i];
+    }
+    q_goal[6] += 10*3.1415/180.;
 
     std::array<double, 7> dq_max{{2.0, 2.0, 2.0, 2.0, 2.5, 2.5, 2.5}};
     std::array<double, 7> ddq_max_start{{5, 5, 5, 5, 5, 5, 5}};

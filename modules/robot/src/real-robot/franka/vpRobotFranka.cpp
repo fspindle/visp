@@ -40,7 +40,11 @@
 
 #ifdef VISP_HAVE_FRANKA
 
+#include <visp3/robot/vpRobotException.h>
 #include <visp3/robot/vpRobotFranka.h>
+
+#include "vpJointPosTrajGenerator_impl.h"
+#include "vpJointVelTrajGenerator_impl.h"
 
 /*!
 
@@ -48,8 +52,9 @@
 
 */
 vpRobotFranka::vpRobotFranka()
-  : vpRobot(), m_handler(NULL)
+  : vpRobot(), m_handler(NULL), m_positionningVelocity(20.), m_controlThread(), m_controlThreadRunning(false)
 {
+  init();
 }
 
 /*!
@@ -59,11 +64,24 @@ vpRobotFranka::vpRobotFranka()
  * be set when required. Setting realtime_config to kIgnore disables this behavior.
  */
 vpRobotFranka::vpRobotFranka(const std::string &franka_address, franka::RealtimeConfig realtime_config)
-  : m_handler(NULL)
+  : vpRobot(), m_handler(NULL), m_positionningVelocity(20.), m_controlThread(), m_controlThreadRunning(false)
 {
+  init();
   connect(franka_address, realtime_config);
 }
 
+/*!
+ * Initialize internal vars, such as min, max joint positions, max velocity and acceleration.
+ */
+void vpRobotFranka::init()
+{
+  nDof = 7;
+
+  m_q_min   = std::array<double, 7> {-2.8973, -1.7628, -2.8973, -3.0718, -2.8973, -0.0175, -2.8973};
+  m_q_max   = std::array<double, 7> {12.8973, 1.7628, 2.8973, 0.0175, 2.8973, 3.7525, 2.8973};
+  m_dq_max  = std::array<double, 7> {2.1750, 2.1750, 2.1750, 2.1750, 2.6100, 2.6100, 2.6100};
+  m_ddq_max = std::array<double, 7> {14.25, 7.125, 11.875, 11.875, 14.25, 19.0, 19.0};
+}
 
 /*!
 
@@ -72,6 +90,12 @@ vpRobotFranka::vpRobotFranka(const std::string &franka_address, franka::Realtime
 */
 vpRobotFranka::~vpRobotFranka()
 {
+  std::cout << "DBG: call destructor -----------------------" << std::endl;
+  setRobotState(vpRobot::STATE_STOP);
+
+//  if (m_controlThread.joinable()) {
+//    m_controlThread.join();
+//  }
   if (m_handler)
     delete m_handler;
 }
@@ -113,7 +137,7 @@ void vpRobotFranka::getPosition(const vpRobot::vpControlFrameType frame, vpColVe
   case JOINT_STATE: {
     joint.resize(nDof);
     for (int i=0; i < nDof; i++)
-      joint[i] = state.q[i];
+      joint[i] = state.q_d[i];
     break;
   }
   default: {
@@ -156,14 +180,128 @@ void vpRobotFranka::getPosition(const vpRobot::vpControlFrameType frame, vpPoseV
   }
 }
 
-/*!
-  Initialise internal vars.
- */
-void vpRobotFranka::init()
+void vpRobotFranka::setPosition(const vpRobot::vpControlFrameType frame, const vpColVector &position)
 {
-  nDof = 7;
+  if (!m_handler) {
+    throw(vpException(vpException::fatalError, "Cannot set Franka robot position: robot is not connected"));
+  }
+  if (vpRobot::STATE_POSITION_CONTROL != getRobotState()) {
+    std::cout << "Robot was not in position-based control. "
+                 "Modification of the robot state" << std::endl;
+    setRobotState(vpRobot::STATE_POSITION_CONTROL);
+  }
+
+  double speed_factor = m_positionningVelocity / 100.;
+
+  std::array<double, 7> q_goal;
+  for (size_t i = 0; i < 7; i++) {
+    q_goal[i] = position[i];
+  }
+
+  vpJointPosTrajGenerator joint_pos_traj_generator(speed_factor, q_goal);
+  m_handler->control(joint_pos_traj_generator);
 }
 
+/*!
+
+  Set the maximal velocity percentage to use for a position control.
+
+  \param velocity : Percentage of the maximal velocity. Values should
+  be in ]0:100].
+
+*/
+void vpRobotFranka::setPositioningVelocity(const double velocity)
+{
+  m_positionningVelocity = velocity;
+}
+
+/*!
+
+  Change the robot state.
+
+  \param newState : New requested robot state.
+*/
+vpRobot::vpRobotStateType vpRobotFranka::setRobotState(vpRobot::vpRobotStateType newState)
+{
+  switch (newState) {
+  case vpRobot::STATE_STOP: {
+    // Start primitive STOP only if the current state is Velocity
+    if (vpRobot::STATE_VELOCITY_CONTROL == getRobotState()) {
+      // Stop the robot
+      std::cout << "DBG: ask to stop the thread setting m_controlThreadRunning = false" << std::endl;
+      m_controlThreadRunning = false;
+      if(m_controlThread.joinable()) {
+        std::cout << "DBG: Stop joint vel thread to stop the robot" << std::endl;
+        m_controlThread.join();
+        std::cout << "DBG: control thread joined" << std::endl;
+      }
+    }
+    break;
+  }
+  case vpRobot::STATE_POSITION_CONTROL: {
+    if (vpRobot::STATE_VELOCITY_CONTROL == getRobotState()) {
+      std::cout << "Change the control mode from velocity to position control.\n";
+      // Stop the robot
+      if(m_controlThread.joinable()) {
+        std::cout << "DBG: Stop joint vel thread to swith to position control" << std::endl;
+        m_controlThread.join();
+        std::cout << "DBG: control thread joined" << std::endl;
+      }
+    }
+    break;
+  }
+  case vpRobot::STATE_VELOCITY_CONTROL: {
+    if (vpRobot::STATE_VELOCITY_CONTROL != getRobotState()) {
+      std::cout << "Change the control mode from stop to velocity control.\n";
+    }
+    std::cout << "DBG: Start joint vel thread" << std::endl;
+    //m_threadJointVel = std::thread(jointVel_thread);
+
+    break;
+  }
+  default:
+    break;
+  }
+
+  return vpRobot::setRobotState(newState);
+}
+
+void vpRobotFranka::setVelocity(const vpRobot::vpControlFrameType frame, const vpColVector &vel)
+{
+  if (vpRobot::STATE_VELOCITY_CONTROL != getRobotState()) {
+    throw vpRobotException(vpRobotException::wrongStateError,
+                           "Cannot send a velocity to the robot. "
+                           "Use setRobotState(vpRobot::STATE_VELOCITY_CONTROL) first.");
+  }
+
+  {
+    std::array<double, 7> dq_des;
+    if (dq_des.size() != vel.size()) {
+      throw vpRobotException(vpRobotException::wrongStateError,
+                             "Joint velocity vector (%d) is not of size 7", vel.size());
+
+    }
+    for (size_t i = 0; i < dq_des.size(); i++) {
+      dq_des[i] = vel[i];
+    }
+
+//    {
+//      std::cout << "DBG: in vpRobotFranka::setVelocity() m_dq_max: ";
+//      for(int i=0; i<7; i++) {
+//        std::cout << m_dq_max[i] << " ";
+//      }
+//      std::cout << std::endl;
+//    }
+
+    if(! m_controlThreadRunning) {
+      m_controlThread = std::thread(&vpJointVelTrajGenerator::control_thread, vpJointVelTrajGenerator(),
+                                    m_handler, std::ref(m_controlThreadRunning), std::ref(dq_des),
+                                    std::cref(m_q_min), std::cref(m_q_max), std::cref(m_dq_max), std::cref(m_ddq_max));
+    }
+  }
+//  std::cout << "DBG: m_controlThreadRunning: " << m_controlThreadRunning << std::endl;
+
+}
 
 #elif !defined(VISP_BUILD_SHARED_LIBS)
 // Work arround to avoid warning: libvisp_robot.a(vpRobotFranka.cpp.o) has

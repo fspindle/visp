@@ -44,6 +44,10 @@
 #ifdef VISP_HAVE_FRANKA
 
 #include <iostream>
+#include <thread>
+#include <atomic>
+#include <vector>
+
 #include <stdio.h>
 
 #include <franka/exception.h>
@@ -51,6 +55,7 @@
 
 #include <visp3/core/vpColVector.h>
 #include <visp3/robot/vpRobot.h>
+#include <visp3/core/vpException.h>
 
 /*!
   \class vpRobotFranka
@@ -80,16 +85,17 @@ private:
    */
   void getDisplacement(const vpRobot::vpControlFrameType frame, vpColVector &q) {};
   void init();
-  /*!
-    This function is not implemented.
-   */
-  void setPosition(const vpRobot::vpControlFrameType frame, const vpColVector &q) {};
-  /*!
-    This function is not implemented.
-   */
-  void setVelocity(const vpRobot::vpControlFrameType frame, const vpColVector &vel) {};
 
   franka::Robot *m_handler; //!< Robot handler
+  double m_positionningVelocity;
+
+  std::thread m_controlThread;
+  std::atomic_bool m_controlThreadRunning;
+
+  std::array<double, 7> m_q_min;   // Joint min position
+  std::array<double, 7> m_q_max;   // Joint max position
+  std::array<double, 7> m_dq_max;  // Joint max velocity
+  std::array<double, 7> m_ddq_max; // Joint max acceleration
 
 public:
   vpRobotFranka();
@@ -118,6 +124,11 @@ public:
   void getPosition(const vpRobot::vpControlFrameType frame, vpColVector &joint);
   void getPosition(const vpRobot::vpControlFrameType frame, vpPoseVector &pose);
 
+  void setPosition(const vpRobot::vpControlFrameType frame, const vpColVector &position);
+  void setPositioningVelocity(const double velocity);
+
+  vpRobot::vpRobotStateType setRobotState(vpRobot::vpRobotStateType newState);
+  void setVelocity(const vpRobot::vpControlFrameType frame, const vpColVector &vel);
 };
 
 #endif

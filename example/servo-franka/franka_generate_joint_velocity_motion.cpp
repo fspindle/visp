@@ -2,6 +2,7 @@
 // Use of this source code is governed by the Apache-2.0 license, see LICENSE
 #include <cmath>
 #include <iostream>
+#include <fstream>
 
 #include <visp3/core/vpConfig.h>
 
@@ -24,12 +25,29 @@
 
 int main(int argc, char **argv)
 {
-  if (argc != 2) {
-    std::cerr << "Usage: ./generate_joint_velocity_motion <robot-hostname>" << std::endl;
+  if (argc == 1) {
+    std::cout << "\nUsage: " << argv[0] << " <robot-hostname> [--save] [--help]\n" << std::endl;
     return -1;
   }
   try {
+    bool save = false;
+    for (int i = 0; i < argc; i++) {
+      if (std::string(argv[i]) == "--save")
+        save = true;
+      else if (std::string(argv[i]) == "--help") {
+        std::cout << "\nUsage: " << argv[0] << " <robot-hostname> [--save] [--help]\n" << std::endl;
+        return 0;
+      }
+    }
+
     franka::Robot robot(argv[1]);
+    std::ofstream f;
+
+    if (save) {
+      std::string filename("joint-vel-command.txt");
+      std::cout << "Save control velocities in: " << filename << std::endl;
+      f.open(filename);
+    }
 
     // Set additional parameters always before the control loop, NEVER in the
     // control loop! Set collision behavior.
@@ -42,7 +60,7 @@ int main(int argc, char **argv)
     double time_max = 4.0;
     double omega_max = 0.2;
     double time = 0.0;
-    robot.control([=, &time](const franka::RobotState &, franka::Duration time_step) -> franka::JointVelocities {
+    robot.control([=, &time, &f](const franka::RobotState &, franka::Duration time_step) -> franka::JointVelocities {
       time += time_step.toSec();
 
       double cycle = std::floor(std::pow(-1.0, (time - std::fmod(time, time_max)) / time_max));
@@ -50,12 +68,25 @@ int main(int argc, char **argv)
 
       franka::JointVelocities velocities = {{0.0, 0.0, 0.0, omega, omega, omega, omega}};
 
+      if (save) {
+        f << time;
+        for (size_t i = 0; i < 7; i ++) {
+          f << " " << velocities.dq[i];
+        }
+        f << std::endl;
+      }
+
       if (time >= 2 * time_max) {
         std::cout << std::endl << "Finished motion, shutting down example" << std::endl;
         return franka::MotionFinished(velocities);
       }
       return velocities;
     });
+
+    if (save) {
+      f.close();
+    }
+
   } catch (const franka::Exception &e) {
     std::cout << e.what() << std::endl;
     return -1;
