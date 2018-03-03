@@ -170,7 +170,7 @@ void vpJointVelTrajGenerator::control_thread(franka::Robot *robot,
     // Note that if the robot does not receive a command it will try to extrapolate
     // the desired behavior assuming a constant acceleration model
     std::array<double, 7> limited_velocities = limitRate(ddq_max, velocities.dq, state.dq_d);
-    std::cout << "vel to apply joint 6: " << dq_cmd[6] << " should be = to " << velocities.dq[6] << " limited to: " << limited_velocities[6] << std::endl;
+    std::cout << "vel to apply joint 6: " << velocities.dq[6] << " limited to: " << limited_velocities[6] << std::endl;
     return limited_velocities;
     //return limitRate(ddq_max, velocities.dq, state.dq_d);
   });
@@ -227,12 +227,11 @@ void vpJointVelTrajGenerator::init(const std::array<double, 7> &q,
   m_deltaQmax.resize(m_njoints);
   m_deltaQ.resize(m_njoints);
   m_Qacc.resize(m_njoints);
-  m_Qacc_sav.resize(m_njoints);
   m_consFin.resize(m_njoints);
   m_signeDep.resize(m_njoints);
   m_dist_AD.resize(m_njoints);
-  m_pcspeed.resize(m_njoints);
-  m_pcspeed_old.resize(m_njoints);
+  m_dq_des.resize(m_njoints);
+  m_dq_des_old.resize(m_njoints);
   m_ecart.resize(m_njoints);
   m_flagSpeed.resize(m_njoints);
 
@@ -241,11 +240,10 @@ void vpJointVelTrajGenerator::init(const std::array<double, 7> &q,
     m_flagSpeed[i] = false;
     m_status[i] 	= FLAGSTO;
     m_deltaQ[i] 	= m_deltaQmax[i] 	= 0.0;
-    m_Qacc_sav[i] = m_Qacc[i] = m_ddq_max[i] * m_delta_t * m_delta_t;
+    m_Qacc[i] = m_ddq_max[i] * m_delta_t * m_delta_t;
     m_consFin[i] 	= q[i];
     m_dist_AD[i] 	= 0.0;
-    m_pcspeed[i]	= m_pcspeed_old[i] = 0.0;
-    m_status[i]   = FLAGSTO;
+    m_dq_des[i]	= m_dq_des_old[i] = 0.0;
     m_signeDep[i]	= 0;
     m_consFin[i] = 0;
   }
@@ -260,31 +258,20 @@ void vpJointVelTrajGenerator::init(const std::array<double, 7> &q,
  */
 void vpJointVelTrajGenerator::applyVel(const std::array<double, 7> &dq_des,
                                        std::array<double, 7> &q_cmd,
-                                       std::array<double, 7>  &dq_cmd)
+                                       std::array<double, 7> &dq_cmd)
 {
   for (size_t i=0; i < m_njoints; i++) {
-    m_pcspeed[i] = dq_des[i]; // TODO fuse in same var
+    m_dq_des[i] = dq_des[i]; // TODO fuse in same var
 
-    if (m_pcspeed[i] != m_pcspeed_old[i]) m_flagJointLimit = false;
+    if (m_dq_des[i] != m_dq_des_old[i]) m_flagJointLimit = false;
 
-    if (m_pcspeed[i] != m_pcspeed_old[i]) {
-      m_Qacc[i] = m_Qacc_sav[i];
-
-      if (m_pcspeed[i] > m_dq_max[i]) {
-        m_pcspeed[i] = m_dq_max[i];
-        if (m_flagQMax == false)
-        {
-          m_flagQMax = true;
-        }
+    if (m_dq_des[i] != m_dq_des_old[i]) {
+      if (m_dq_des[i] > m_dq_max[i]) {
+        m_dq_des[i] = m_dq_max[i];
       }
-      else if (m_pcspeed[i] < (-m_dq_max[i])) {
-        m_pcspeed[i] = -m_dq_max[i];
-        if (m_flagQMax == false)
-        {
-          m_flagQMax = true;
-        }
+      else if (m_dq_des[i] < (-m_dq_max[i])) {
+        m_dq_des[i] = -m_dq_max[i];
       }
-      else m_flagQMax = false;
 
       if (m_flagSpeed[i] == false) {
         //if (pt_movespeed.m_flagSpeed[i] == false) {
@@ -292,17 +279,17 @@ void vpJointVelTrajGenerator::applyVel(const std::array<double, 7> &dq_des,
 
         if ( m_status[i] == FLAGSTO) /* Si arret */
         {
-          if (m_pcspeed[i] > 0)
+          if (m_dq_des[i] > 0)
           {
-            m_deltaQmax[i] = m_pcspeed[i]*m_delta_t;
+            m_deltaQmax[i] = m_dq_des[i]*m_delta_t;
             m_signeDep[i] = 1;
             m_consFin[i] = m_q_max[i] - m_offset_joint_limit;
             m_deltaQ[i] = 0;
             m_status[i] = FLAGACC;
           }
-          else if (m_pcspeed[i] < 0)
+          else if (m_dq_des[i] < 0)
           {
-            m_deltaQmax[i] = - m_pcspeed[i]*m_delta_t;
+            m_deltaQmax[i] = - m_dq_des[i]*m_delta_t;
             m_signeDep[i] = -1;
             m_consFin[i] = m_q_min[i] + m_offset_joint_limit;
             m_deltaQ[i] = 0;
@@ -312,7 +299,7 @@ void vpJointVelTrajGenerator::applyVel(const std::array<double, 7> &dq_des,
         // Si non en arret et changement de sens
 
 
-        else if ( (m_pcspeed[i] * m_signeDep[i]) < 0) {
+        else if ( (m_dq_des[i] * m_signeDep[i]) < 0) { // Change direction
           m_flagSpeed[i] = true;
           m_status[i] = FLAGDEC;
           m_deltaQmax[i] = 0;
@@ -321,23 +308,26 @@ void vpJointVelTrajGenerator::applyVel(const std::array<double, 7> &dq_des,
 
         else {	/* Non arret et pas de changement de sens */
           if ( m_signeDep[i] == 1) {
-            if ( m_pcspeed[i] > m_pcspeed_old[i])
+            if ( m_dq_des[i] > m_dq_des_old[i])
               m_status[i] = FLAGACC;
-            else  m_status[i] = FLAGDEC;
-            m_deltaQmax[i] = m_pcspeed[i]*m_delta_t;
+            else
+              m_status[i] = FLAGDEC;
+            m_deltaQmax[i] = m_dq_des[i]*m_delta_t;
           }
           else {
-            if ( m_pcspeed[i] > m_pcspeed_old[i])
+            if ( m_dq_des[i] > m_dq_des_old[i])
               m_status[i] = FLAGDEC;
-            else  m_status[i] = FLAGACC;
-            m_deltaQmax[i] = - m_pcspeed[i]*m_delta_t;
+            else
+              m_status[i] = FLAGACC;
+            m_deltaQmax[i] = - m_dq_des[i]*m_delta_t;
           }
         }
 
+        // Update distance to accelerate or decelerate
         int n = (int) (m_deltaQmax[i] / m_Qacc[i]);
         m_dist_AD[i]=n*(m_deltaQmax[i]-(n+1)*m_Qacc[i]/2);
       }
-      m_pcspeed_old[i] = m_pcspeed[i];
+      m_dq_des_old[i] = m_dq_des[i];
     }
 
     /*
@@ -347,16 +337,6 @@ void vpJointVelTrajGenerator::applyVel(const std::array<double, 7> &dq_des,
      *		- arret
      */
 
-    { // debug
-      int axe = 6;
-      std::cout << "m_consFin[" << axe << "]: " << m_consFin[axe]
-                   << " m_q_cmd[" << axe << "]: " << m_q_cmd[axe]
-                      << " m_ecart[" << axe << "]: " << m_ecart[axe]
-                         << " m_dist_AD[" << axe << "]: " << m_dist_AD[axe]
-                            << " m_q_min[" << axe << "]: " << m_q_min[axe]
-                               << " m_q_max[" << axe << "]: " << m_q_max[axe]
-                         << std::endl;
-    }
     for (size_t i=0; i < m_njoints; i++) {
       /*
        * Securite butee en vitesse constante
@@ -384,14 +364,13 @@ void vpJointVelTrajGenerator::applyVel(const std::array<double, 7> &dq_des,
             m_deltaQ[i] = 0.0;
             // Test si on etait en phase de changement de sens.
             if (m_flagSpeed[i] == true) {
-              //if (pt_movespeed.m_flagSpeed[i] == true) {
-              if (m_pcspeed[i] > 0) {
-                m_deltaQmax[i] = m_pcspeed[i]*m_delta_t;
+              if (m_dq_des[i] > 0) {
+                m_deltaQmax[i] = m_dq_des[i]*m_delta_t;
                 m_signeDep[i] = 1;
                 m_consFin[i] = m_q_max[i] - m_offset_joint_limit;
               }
-              else if (m_pcspeed[i] < 0) {
-                m_deltaQmax[i] = -m_pcspeed[i]*m_delta_t;
+              else if (m_dq_des[i] < 0) {
+                m_deltaQmax[i] = -m_dq_des[i]*m_delta_t;
                 m_signeDep[i] = -1;
                 m_consFin[i] = m_q_min[i] + m_offset_joint_limit;
               }
@@ -437,7 +416,7 @@ void vpJointVelTrajGenerator::applyVel(const std::array<double, 7> &dq_des,
 
     // Test si un axe arrive pres des butees. Si oui, arret de tous les axes
     for (size_t i=0; i < m_njoints;i++) {
-      float butee = m_q_min[i] + m_offset_joint_limit;
+      double butee = m_q_min[i] + m_offset_joint_limit;
       if (m_q_cmd[i] < butee) {
         for (size_t j=0; j < m_njoints;j++) m_q_cmd[j] -= m_signeDep[j]*m_deltaQ[j];
         m_q_cmd[i] = butee;
@@ -460,6 +439,17 @@ void vpJointVelTrajGenerator::applyVel(const std::array<double, 7> &dq_des,
     //    std::cout << std::endl;
 
   }
+  { // debug
+    int axe = 6;
+    std::cout << "m_consFin[" << axe << "]: " << m_consFin[axe]
+                 << " m_q_cmd[" << axe << "]: " << m_q_cmd[axe]
+                    << " m_ecart[" << axe << "]: " << m_ecart[axe]
+                       << " m_dist_AD[" << axe << "]: " << m_dist_AD[axe]
+                          << " m_q_min[" << axe << "]: " << m_q_min[axe]
+                             << " m_q_max[" << axe << "]: " << m_q_max[axe]
+                       << std::endl;
+  }
+
   q_cmd = m_q_cmd;
   dq_cmd = m_dq_cmd;
 }

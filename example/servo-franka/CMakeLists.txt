@@ -58,8 +58,12 @@ set(example_cpp
   servoFranka.cpp
 )
 
+set(common
+    examples_common.cpp
+    examples_common.h
+)
 foreach(cpp ${example_cpp})
-  visp_add_target(${cpp})
+  visp_add_target(${cpp} ${common})
   if(COMMAND visp_add_dependency)
     visp_add_dependency(${cpp} "examples")
   endif()

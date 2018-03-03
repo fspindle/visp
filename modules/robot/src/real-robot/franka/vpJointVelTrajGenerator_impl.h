@@ -52,8 +52,8 @@
 
 class vpJointVelTrajGenerator {
 public:
-  vpJointVelTrajGenerator() : m_status(), m_deltaQmax(), m_deltaQ(), m_Qacc(), m_Qacc_sav(),
-    m_consFin(), m_signeDep(), m_q_cmd(), m_dq_cmd(), m_dist_AD(), m_pcspeed(), m_pcspeed_old(), m_ecart(),
+  vpJointVelTrajGenerator() : m_status(), m_deltaQmax(), m_deltaQ(), m_Qacc(),
+    m_consFin(), m_signeDep(), m_q_cmd(), m_dq_cmd(), m_dist_AD(), m_dq_des(), m_dq_des_old(), m_ecart(),
     m_flagSpeed(),
     m_q_min(), m_q_max(), m_dq_max(), m_ddq_max(), m_njoints(7)  {}
   ~vpJointVelTrajGenerator() {}
@@ -96,14 +96,13 @@ private:
   std::vector<double> m_deltaQmax;   // Increment de consigne maximum
   std::vector<double> m_deltaQ;		  // Increment de consigne en cours
   std::vector<double> m_Qacc;		    // Increment d'increment de consigne
-  std::vector<double> m_Qacc_sav;    // Sauvegarde
   std::vector<double> m_consFin;    	// Consigne finale (butee)
   std::vector<int>   m_signeDep;	  // Signe du deplacement: +1 = incrementer consigne
   std::array<double, 7> m_q_cmd;     // Joint position to apply in rad
   std::array<double, 7> m_dq_cmd;   // Joint velocity to apply in rad
   std::vector<double> m_dist_AD;		  // Distance requise pour acce et decel
-  std::vector<double> m_pcspeed;		  // Recopie des consigne de vitesse
-  std::vector<double> m_pcspeed_old;
+  std::vector<double> m_dq_des;		  // Desired velocity
+  std::vector<double> m_dq_des_old;
   std::vector<double> m_ecart;		    // Difference entre consigne et consigne finale
   std::vector<double> m_flagSpeed;
 
@@ -116,7 +115,6 @@ private:
   size_t m_njoints;
   float m_delta_t;
 
-  bool m_flagQMax;
   bool m_flagJointLimit;
 
   const float m_offset_joint_limit = 0.01; // stop before joint limit

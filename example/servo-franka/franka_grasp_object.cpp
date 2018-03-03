@@ -1,11 +1,6 @@
 // Copyright (c) 2017 Franka Emika GmbH
 // Use of this source code is governed by the Apache-2.0 license, see LICENSE
 #include <iostream>
-
-#include <visp3/core/vpConfig.h>
-
-#ifdef VISP_HAVE_FRANKA
-
 #include <sstream>
 #include <string>
 #include <thread>
@@ -14,16 +9,11 @@
 #include <franka/gripper.h>
 
 /**
- * @example franka_grasp_object.cpp
+ * @example grasp_object.cpp
  * An example showing how to control FRANKA's gripper.
- *
- * This example is part of libfranka FCI C++ API:
- * https://frankaemika.github.io/libfranka See
- * https://frankaemika.github.io/docs for more details.
  */
 
-int main(int argc, char **argv)
-{
+int main(int argc, char** argv) {
   if (argc != 4) {
     std::cerr << "Usage: ./grasp_object <gripper-hostname> <homing> <object-width>" << std::endl;
     return -1;
@@ -41,8 +31,7 @@ int main(int argc, char **argv)
     }
 
     if (homing) {
-      // Do a homing in order to estimate the maximum grasping width with the
-      // current fingers.
+      // Do a homing in order to estimate the maximum grasping width with the current fingers.
       gripper.homing();
     }
 
@@ -54,7 +43,7 @@ int main(int argc, char **argv)
     }
 
     // Grasp the object.
-    if (!gripper.grasp(grasping_width, 0.1, 300)) {
+    if (!gripper.grasp(grasping_width, 0.1, 60)) {
       std::cout << "Failed to grasp object." << std::endl;
       return -1;
     }
@@ -70,14 +59,10 @@ int main(int argc, char **argv)
 
     std::cout << "Grasped object, will release it now." << std::endl;
     gripper.stop();
-  } catch (franka::Exception const &e) {
+  } catch (franka::Exception const& e) {
     std::cout << e.what() << std::endl;
     return -1;
   }
 
   return 0;
 }
-
-#else
-int main() { std::cout << "This example needs libfranka to control Panda robot." << std::endl; }
-#endif

@@ -67,7 +67,7 @@ vpRobotFranka::vpRobotFranka(const std::string &franka_address, franka::Realtime
   : vpRobot(), m_handler(NULL), m_positionningVelocity(20.), m_controlThread(), m_controlThreadRunning(false)
 {
   init();
-  connect(franka_address, realtime_config);
+  connect(franka_address, realtime_config);  
 }
 
 /*!
@@ -101,7 +101,7 @@ vpRobotFranka::~vpRobotFranka()
 }
 
 /*!
- * Establishes a connection with the robot.
+ * Establishes a connection with the robot and set default behavior.
  * \param[in] franka_address IP/hostname of the robot.
  * \param[in] realtime_config If set to kEnforce, an exception will be thrown if realtime priority cannot
  * be set when required. Setting realtime_config to kIgnore disables this behavior.
@@ -116,6 +116,16 @@ void vpRobotFranka::connect(const std::string &franka_address, franka::RealtimeC
     delete m_handler;
 
   m_handler = new franka::Robot(franka_address, realtime_config);
+
+  m_handler->setCollisionBehavior(
+      {{20.0, 20.0, 20.0, 20.0, 20.0, 20.0, 20.0}}, {{20.0, 20.0, 20.0, 20.0, 20.0, 20.0, 20.0}},
+      {{10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0}}, {{10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0}},
+      {{20.0, 20.0, 20.0, 20.0, 20.0, 20.0}}, {{20.0, 20.0, 20.0, 20.0, 20.0, 20.0}},
+      {{10.0, 10.0, 10.0, 10.0, 10.0, 10.0}}, {{10.0, 10.0, 10.0, 10.0, 10.0, 10.0}});
+  m_handler->setJointImpedance({{3000, 3000, 3000, 2500, 2500, 2000, 2000}});
+  m_handler->setCartesianImpedance({{3000, 3000, 3000, 300, 300, 300}});
+  m_handler->setFilters(100, 100, 100, 100, 100);
+
 }
 
 /*!
