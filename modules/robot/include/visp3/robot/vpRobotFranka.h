@@ -97,7 +97,7 @@ private:
   std::array<double, 7> m_dq_max;   // Joint max velocity
   std::array<double, 7> m_ddq_max;  // Joint max acceleration
 
-  franka::RobotState m_robot_state; // Robot state potected by mutex
+  franka::RobotState m_robot_state; // Robot state protected by mutex
   std::mutex m_mutex;               // Mutex to protect m_robot_state
 
 public:
