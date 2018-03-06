@@ -7,6 +7,7 @@
 
 ViSP 3.2.0 (under development)
   - New features
+    . Introduce vpSerial class to handle serial communication
   - Tutorials
   - Bug fixed
     . [#279] Unable to build ViSP with Visual Studio 2010

@@ -39,7 +39,10 @@
 #ifndef __vpSerial_h_
 #define __vpSerial_h_
 
+#if !defined(_WIN32)
+
 #include <string>
+#include <stdint.h>
 
 #include <visp3/core/vpConfig.h>
 
@@ -90,7 +93,9 @@ public:
   int available();
   void close();
   void open();
-  std::string read();
+  bool read(char *c, long timeout_s);
+  std::string readline(const std::string &eol);
+  bool waitReadable(long timeout_s);
   void write(const std::string &s);
 
 private:
@@ -112,4 +117,5 @@ private:
 
 };
 
+#endif
 #endif

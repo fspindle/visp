@@ -36,6 +36,10 @@
  *
  *****************************************************************************/
 
+#include <visp3/core/vpConfig.h>
+
+#if !defined(_WIN32)
+
 #include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -45,6 +49,7 @@
 #include <sys/ioctl.h>
 #include <termios.h>
 #include <unistd.h>
+#include <errno.h>
 
 #include <visp3/core/vpSerial.h>
 #include <visp3/core/vpException.h>
@@ -131,9 +136,54 @@ void vpSerial::open()
   m_is_open = true;
 }
 
-std::string vpSerial::read()
+bool vpSerial::read(char *c, long timeout_s)
 {
+  if (m_is_open == false) {
+    throw(vpException(vpException::fatalError, "Serial port not opened"));
+  }
 
+  fd_set readfds;                          /* list of fds for select to listen to */
+  struct timeval timeout = {timeout_s, 0}; // seconde, micro-sec
+
+  FD_ZERO(&readfds);
+  FD_SET(static_cast<unsigned int>(m_fd), &readfds);
+
+  int ret = select(FD_SETSIZE, &readfds, (fd_set *)NULL, (fd_set *)NULL, &timeout);
+
+  if (ret < 0) {
+    throw(vpException(vpException::fatalError, "Serial i/o exception"));
+  }
+  else if (ret == 0) {
+    // Timeout occured
+    return false;
+  }
+  else {
+    ssize_t n = ::read(m_fd, c, 1); // read one character at a time
+    if (n != 1)
+      return false;
+  }
+  return true;
+}
+
+std::string vpSerial::readline(const std::string &eol)
+{
+  char c;
+  size_t read_so_far = 0;
+  size_t eol_len = eol.length ();
+  std::string line;
+
+  while(true) {
+    size_t bytes_read = this->read(&c, 1);
+    read_so_far += bytes_read;
+    if (bytes_read == 0) {
+      break; // Timeout occured on reading 1 byte
+    }
+    line.append(&c, 1);
+    if (std::string(line, line.size() - eol_len, eol_len) == eol) {
+      break; // EOL found
+    }
+  }
+  return line;
 }
 
 void vpSerial::write(const std::string &s)
@@ -164,20 +214,126 @@ void vpSerial::configure()
   // set up raw mode / no echo / binary
   options.c_cflag |= (tcflag_t)  (CLOCAL | CREAD);
   options.c_lflag &= (tcflag_t) ~(ICANON | ECHO | ECHOE | ECHOK | ECHONL |
-                                       ISIG | IEXTEN); //|ECHOPRT
+                                  ISIG | IEXTEN); //|ECHOPRT
 
   options.c_oflag &= (tcflag_t) ~(OPOST);
   options.c_iflag &= (tcflag_t) ~(INLCR | IGNCR | ICRNL | IGNBRK);
 
+#ifdef IUCLC
+  options.c_iflag &= (tcflag_t) ~IUCLC;
+#endif
+#ifdef PARMRK
+  options.c_iflag &= (tcflag_t) ~PARMRK;
+#endif
+
   speed_t baudrate;
   switch(m_baudrate) {
+#ifdef B0
+  case 0: baudrate = B0; break;
+#endif
+#ifdef B50
+  case 50: baudrate = B50; break;
+#endif
+#ifdef B75
+  case 75: baudrate = B75; break;
+#endif
+#ifdef B110
+  case 110: baudrate = B110; break;
+#endif
+#ifdef B134
+  case 134: baudrate = B134; break;
+#endif
+#ifdef B150
+  case 150: baudrate = B150; break;
+#endif
+#ifdef B200
+  case 200: baudrate = B200; break;
+#endif
+#ifdef B300
+  case 300: baudrate = B300; break;
+#endif
+#ifdef B600
+  case 600: baudrate = B600; break;
+#endif
+#ifdef B1200
+  case 1200: baudrate = B1200; break;
+#endif
+#ifdef B1800
+  case 1800: baudrate = B1800; break;
+#endif
+#ifdef B2400
+  case 2400: baudrate = B2400; break;
+#endif
+#ifdef B4800
+  case 4800: baudrate = B4800; break;
+#endif
+#ifdef B9600
   case 9600: baudrate = B9600; break;
+#endif
+#ifdef B14400
+  case 14400: baudrate = B14400; break;
+#endif
+#ifdef B19200
   case 19200: baudrate = B19200; break;
+#endif
+#ifdef B38400
   case 38400: baudrate = B38400; break;
-  case 76800: baudrate = B76800; break;
+#endif
+#ifdef B57600
+  case 57600: baudrate = B57600; break;
+#endif
+#ifdef B115200
+  case 115200: baudrate = B115200; break;
+#endif
+#ifdef B230400
+  case 230400: baudrate = B230400; break;
+#endif
+#ifdef B460800
+  case 460800: baudrate = B460800; break;
+#endif
+#ifdef B500000
+  case 500000: baudrate = B500000; break;
+#endif
+#ifdef B576000
+  case 576000: baudrate = B576000; break;
+#endif
+#ifdef B921600
+  case 921600: baudrate = B921600; break;
+#endif
+#ifdef B1000000
+  case 1000000: baudrate = B1000000; break;
+#endif
+#ifdef B1152000
+  case 1152000: baudrate = B1152000; break;
+#endif
+#ifdef B1500000
+  case 1500000: baudrate = B1500000; break;
+#endif
+#ifdef B2000000
+  case 2000000: baudrate = B2000000; break;
+#endif
+#ifdef B2500000
+  case 2500000: baudrate = B2500000; break;
+#endif
+#ifdef B3000000
+  case 3000000: baudrate = B3000000; break;
+#endif
+#ifdef B3500000
+  case 3500000: baudrate = B3500000; break;
+#endif
+#ifdef B4000000
+  case 4000000: baudrate = B4000000; break;
+#endif
+  default:
+    throw vpException(vpException::fatalError, "Cannot set serial baudrate to %ld", m_baudrate);
   }
-  ::cfsetispeed(&options, baudrate);
-  ::cfsetospeed(&options, baudrate);
+
+#ifdef _BSD_SOURCE
+    ::cfsetspeed(&options, baudrate);
+#else
+    ::cfsetispeed(&options, baudrate);
+    ::cfsetospeed(&options, baudrate);
+#endif
 
   // setup char len
   options.c_cflag &= (tcflag_t) ~CSIZE;
@@ -225,13 +381,26 @@ void vpSerial::configure()
   if (m_xonxoff)
     options.c_iflag |=  (IXON | IXOFF);
   else
+#ifdef IXANY
+    options.c_iflag &= (tcflag_t) ~(IXON | IXOFF | IXANY);
+#else
     options.c_iflag &= (tcflag_t) ~(IXON | IXOFF);
+#endif
 
   // rtscts
+#ifdef CRTSCTS
   if (m_rtscts)
     options.c_cflag |=  (CRTSCTS);
   else
     options.c_cflag &= (unsigned long) ~(CRTSCTS);
+#elif defined CNEW_RTSCTS
+  if (m_rtscts)
+    options.c_cflag |=  (CNEW_RTSCTS);
+  else
+    options.c_cflag &= (unsigned long) ~(CNEW_RTSCTS);
+#else
+#error "OS doesn't support serial rtscts"
+#endif
 
   options.c_cc[VMIN] = 0;
   options.c_cc[VTIME] = 0;
@@ -239,3 +408,8 @@ void vpSerial::configure()
   // activate settings
   ::tcsetattr (m_fd, TCSANOW, &options);
 }
+
+#elif !defined(VISP_BUILD_SHARED_LIBS)
+// Work arround to avoid warning: libvisp_ar.a(vpAROgre.cpp.o) has no symbols
+void dummy_vpSerial(){};
+#endif
