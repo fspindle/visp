@@ -52,7 +52,9 @@
 
 */
 vpRobotFranka::vpRobotFranka()
-  : vpRobot(), m_handler(NULL), m_positionningVelocity(20.), m_controlThread(), m_controlThreadRunning(false)
+  : vpRobot(), m_handler(NULL), m_positionningVelocity(20.), m_controlThread(), m_controlThreadRunning(false),
+    m_q_min(), m_q_max(), m_dq_max(), m_ddq_max(), m_robot_state(),
+    m_mutex()
 {
   init();
 }
@@ -64,7 +66,9 @@ vpRobotFranka::vpRobotFranka()
  * be set when required. Setting realtime_config to kIgnore disables this behavior.
  */
 vpRobotFranka::vpRobotFranka(const std::string &franka_address, franka::RealtimeConfig realtime_config)
-  : vpRobot(), m_handler(NULL), m_positionningVelocity(20.), m_controlThread(), m_controlThreadRunning(false)
+  : vpRobot(), m_handler(NULL), m_positionningVelocity(20.), m_controlThread(), m_controlThreadRunning(false),
+    m_q_min(), m_q_max(), m_dq_max(), m_ddq_max(), m_robot_state(),
+    m_mutex()
 {
   init();
   connect(franka_address, realtime_config);  
@@ -125,7 +129,6 @@ void vpRobotFranka::connect(const std::string &franka_address, franka::RealtimeC
   m_handler->setJointImpedance({{3000, 3000, 3000, 2500, 2500, 2000, 2000}});
   m_handler->setCartesianImpedance({{3000, 3000, 3000, 300, 300, 300}});
   m_handler->setFilters(100, 100, 100, 100, 100);
-
 }
 
 /*!
@@ -142,7 +145,19 @@ void vpRobotFranka::getPosition(const vpRobot::vpControlFrameType frame, vpColVe
     throw(vpException(vpException::fatalError, "Cannot get Franka robot position: robot is not connected"));
   }
 
-  franka::RobotState robot_state = getRobotInternalState();
+  // franka::RobotState robot_state = getRobotInternalState(); // TODO bug check why robot moves
+
+  franka::RobotState robot_state;
+  if (! m_controlThreadRunning) {
+    robot_state = m_handler->readOnce();
+
+    std::lock_guard<std::mutex> lock(m_mutex);
+    m_robot_state = robot_state;
+  }
+  else { // robot_state is updated in the velocity control thread
+    std::lock_guard<std::mutex> lock(m_mutex);
+    robot_state = m_robot_state;
+  }
 
   switch(frame) {
   case JOINT_STATE: {
@@ -171,7 +186,19 @@ void vpRobotFranka::getPosition(const vpRobot::vpControlFrameType frame, vpPoseV
     throw(vpException(vpException::fatalError, "Cannot get Franka robot position: robot is not connected"));
   }
 
-  franka::RobotState robot_state = getRobotInternalState();
+  // franka::RobotState robot_state = getRobotInternalState(); // TODO bug check why robot moves
+
+  franka::RobotState robot_state;
+  if (! m_controlThreadRunning) {
+    robot_state = m_handler->readOnce();
+
+    std::lock_guard<std::mutex> lock(m_mutex);
+    m_robot_state = robot_state;
+  }
+  else { // robot_state is updated in the velocity control thread
+    std::lock_guard<std::mutex> lock(m_mutex);
+    robot_state = m_robot_state;
+  }
 
   switch(frame) {
   case END_EFFECTOR_FRAME: {
@@ -191,6 +218,75 @@ void vpRobotFranka::getPosition(const vpRobot::vpControlFrameType frame, vpPoseV
   }
   }
 }
+
+void vpRobotFranka::get_eJe(vpMatrix &eJe)
+{
+  if (!m_handler) {
+    throw(vpException(vpException::fatalError, "Cannot get Franka robot position: robot is not connected"));
+  }
+
+  // franka::RobotState robot_state = getRobotInternalState(); // TODO bug check why robot moves
+
+  franka::RobotState robot_state;
+  if (! m_controlThreadRunning) {
+    robot_state = m_handler->readOnce();
+
+    std::lock_guard<std::mutex> lock(m_mutex);
+    m_robot_state = robot_state;
+  }
+  else { // robot_state is updated in the velocity control thread
+    std::lock_guard<std::mutex> lock(m_mutex);
+    robot_state = m_robot_state;
+  }
+
+  franka::Model model = m_handler->loadModel(); // TODO see if this function cost time
+
+  std::array<double, 42> jacobian = model.bodyJacobian(franka::Frame::kEndEffector, robot_state); // column-major
+  eJe.resize(6, 7); // row-major
+  for (size_t i = 0; i < 6; i ++) {
+    for (size_t j = 0; j < 7; j ++) {
+      eJe[i][j] = jacobian[j*6 + i];
+    }
+  }
+  // TODO check from vpRobot fJe and fJeAvailable
+
+  //std::memcpy(eJe.data, jacobian, 42*sizeof(double)); // TODO optimize
+}
+
+void vpRobotFranka::get_fJe(vpMatrix &fJe)
+{
+  if (!m_handler) {
+    throw(vpException(vpException::fatalError, "Cannot get Franka robot position: robot is not connected"));
+  }
+
+  // franka::RobotState robot_state = getRobotInternalState(); // TODO bug check why robot moves
+
+  franka::RobotState robot_state;
+  if (! m_controlThreadRunning) {
+    robot_state = m_handler->readOnce();
+
+    std::lock_guard<std::mutex> lock(m_mutex);
+    m_robot_state = robot_state;
+  }
+  else { // robot_state is updated in the velocity control thread
+    std::lock_guard<std::mutex> lock(m_mutex);
+    robot_state = m_robot_state;
+  }
+
+  franka::Model model = m_handler->loadModel(); // TODO see if this function cost time
+
+  std::array<double, 42> jacobian = model.zeroJacobian(franka::Frame::kEndEffector, robot_state); // column-major
+  fJe.resize(6, 7); // row-major
+  for (size_t i = 0; i < 6; i ++) {
+    for (size_t j = 0; j < 7; j ++) {
+      fJe[i][j] = jacobian[j*6 + i];
+    }
+  }
+  // TODO check from vpRobot fJe and fJeAvailable
+
+//  std::memcpy(fJe.data, jacobian, 42*sizeof(double)); // TODO optimize
+}
+
 
 void vpRobotFranka::setPosition(const vpRobot::vpControlFrameType frame, const vpColVector &position)
 {

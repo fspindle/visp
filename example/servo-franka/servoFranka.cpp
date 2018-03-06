@@ -73,7 +73,28 @@ int main(int argc, char **argv)
       vpColVector q;
 
       robot.getPosition(vpRobot::JOINT_STATE, q);
-      std::cout << "Joint position: " << q.t() << std::endl;
+      std::cout << "Initial joint position: " << q.t() << std::endl;
+
+      q[0] = 0;
+      q[1] = -M_PI_4;
+      q[2] = 0;
+      q[3] = -3 * M_PI_4;
+      q[4] = 0;
+      q[5] = M_PI_2;
+      q[6] = M_PI_4;
+      std::cout << "Move to joint position: " << q.t() << std::endl;
+      robot.setPosition(vpRobot::JOINT_STATE, q);
+
+      vpMatrix eJe;
+      robot.get_eJe(eJe);
+      std::cout << "eJe:\n" << eJe << std::endl;
+
+      vpColVector dq(7);
+      dq[6] = vpMath::rad(5);
+      vpColVector v = eJe * dq;
+      std::cout << "dq: " << dq.t() << std::endl;
+      std::cout << "v: " << v.t() << std::endl;
+      return 0;
 
       robot.setRobotState(vpRobot::STATE_VELOCITY_CONTROL);
 
