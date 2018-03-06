@@ -142,17 +142,7 @@ void vpRobotFranka::getPosition(const vpRobot::vpControlFrameType frame, vpColVe
     throw(vpException(vpException::fatalError, "Cannot get Franka robot position: robot is not connected"));
   }
 
-  franka::RobotState robot_state;
-  if (! m_controlThreadRunning) {
-    robot_state = m_handler->readOnce();
-
-    std::lock_guard<std::mutex> lock(m_mutex);
-    m_robot_state = robot_state;
-  }
-  else { // robot_state is updated in the velocity control thread
-    std::lock_guard<std::mutex> lock(m_mutex);
-    robot_state = m_robot_state;
-  }
+  franka::RobotState robot_state = getRobotInternalState();
 
   switch(frame) {
   case JOINT_STATE: {
@@ -181,17 +171,7 @@ void vpRobotFranka::getPosition(const vpRobot::vpControlFrameType frame, vpPoseV
     throw(vpException(vpException::fatalError, "Cannot get Franka robot position: robot is not connected"));
   }
 
-  franka::RobotState robot_state;
-  if (! m_controlThreadRunning) {
-    robot_state = m_handler->readOnce();
-
-    std::lock_guard<std::mutex> lock(m_mutex);
-    m_robot_state = robot_state;
-  }
-  else { // robot_state is updated in the velocity control thread
-    std::lock_guard<std::mutex> lock(m_mutex);
-    robot_state = m_robot_state;
-  }
+  franka::RobotState robot_state = getRobotInternalState();
 
   switch(frame) {
   case END_EFFECTOR_FRAME: {

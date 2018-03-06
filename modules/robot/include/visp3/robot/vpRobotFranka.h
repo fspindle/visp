@@ -84,6 +84,7 @@ private:
     This function is not implemented.
    */
   void getDisplacement(const vpRobot::vpControlFrameType frame, vpColVector &q) {};
+  inline franka::RobotState getRobotInternalState(); // Should be absolutely inline
   void init();
 
   franka::Robot *m_handler; //!< Robot handler
@@ -134,6 +135,26 @@ public:
   void setVelocity(const vpRobot::vpControlFrameType frame, const vpColVector &vel);
 };
 
+// Should be absolutely inline
+franka::RobotState vpRobotFranka::getRobotInternalState()
+{
+  if (!m_handler) {
+    throw(vpException(vpException::fatalError, "Cannot get Franka robot state: robot is not connected"));
+  }
+  franka::RobotState robot_state;
+  if (! m_controlThreadRunning) {
+    robot_state = m_handler->readOnce();
+
+    std::lock_guard<std::mutex> lock(m_mutex);
+    m_robot_state = robot_state;
+  }
+  else { // robot_state is updated in the velocity control thread
+    std::lock_guard<std::mutex> lock(m_mutex);
+    robot_state = m_robot_state;
+  }
+
+  return robot_state;
+}
+
 #endif
 #endif // #ifndef __vpRobotFranka_h__
-
