@@ -92,10 +92,13 @@ private:
   std::thread m_controlThread;
   std::atomic_bool m_controlThreadRunning;
 
-  std::array<double, 7> m_q_min;   // Joint min position
-  std::array<double, 7> m_q_max;   // Joint max position
-  std::array<double, 7> m_dq_max;  // Joint max velocity
-  std::array<double, 7> m_ddq_max; // Joint max acceleration
+  std::array<double, 7> m_q_min;    // Joint min position
+  std::array<double, 7> m_q_max;    // Joint max position
+  std::array<double, 7> m_dq_max;   // Joint max velocity
+  std::array<double, 7> m_ddq_max;  // Joint max acceleration
+
+  franka::RobotState m_robot_state; // Robot state potected by mutex
+  std::mutex m_mutex;               // Mutex to protect m_robot_state
 
 public:
   vpRobotFranka();

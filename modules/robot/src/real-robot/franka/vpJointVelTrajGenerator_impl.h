@@ -40,85 +40,91 @@
 #define __vpJointVelTrajGenerator_impl_h_
 
 #include <array>
+#include <vector>
 #include <iostream>
 #include <atomic>
 
+#include <visp3/core/vpConfig.h>
+
+#ifdef VISP_HAVE_FRANKA
 #include <franka/exception.h>
 #include <franka/robot.h>
 
 #include <franka/control_types.h>
 #include <franka/duration.h>
 #include <franka/robot_state.h>
+#endif
 
 class vpJointVelTrajGenerator {
 public:
-  vpJointVelTrajGenerator() : m_status(), m_deltaQmax(), m_deltaQ(), m_Qacc(),
-    m_consFin(), m_signeDep(), m_q_cmd(), m_dq_cmd(), m_dist_AD(), m_dq_des(), m_dq_des_old(), m_ecart(),
+  vpJointVelTrajGenerator() :
+    m_status(), m_delta_q(), m_delta_q_max(), m_delta_q_acc(),
+    m_q_final(), m_sign(), m_q_cmd(), m_q_cmd_prev(), m_dist_AD(), m_dq_des(), m_dq_des_prev(), m_dist_to_final(),
     m_flagSpeed(),
-    m_q_min(), m_q_max(), m_dq_max(), m_ddq_max(), m_njoints(7)  {}
+    m_q_min(), m_q_max(), m_dq_max(), m_ddq_max(), m_njoints(7), m_delta_t(0.001), m_flagJointLimit(false)  {}
   ~vpJointVelTrajGenerator() {}
 
   void applyVel(const std::array<double, 7> &dq_des,
                 std::array<double, 7> &q_cmd,
-                std::array<double, 7>  &dq_cmd);
+                std::array<double, 7> &dq_cmd);
 
+#ifdef VISP_HAVE_FRANKA
   void control_thread(franka::Robot *robot, std::atomic_bool &running,
-                      std::array<double, 7> &dq_des, // TODO should be const
+                      const std::array<double, 7> &dq_des,
                       const std::array<double, 7> &q_min,
                       const std::array<double, 7> &q_max,
                       const std::array<double, 7> &dq_max,
-                      const std::array<double, 7> &ddq_max);
+                      const std::array<double, 7> &ddq_max,
+                      franka::RobotState &robot_state,
+                      std::mutex &mutex);
+#endif
 
   void init (const std::array<double, 7> &q,
              const std::array<double, 7> &q_min,
              const std::array<double, 7> &q_max,
              const std::array<double, 7> &dq_max,
              const std::array<double, 7> &ddq_max,
-             const float delta_t);
+             const double delta_t);
 
   std::array<double, 7> limitRate(const std::array<double, 7>& max_derivatives,
                                   const std::array<double, 7>& desired_values,
                                   const std::array<double, 7>& last_desired_values);
 
 private:
-  enum {
-    FLAGACC,	// Axe en acceleration
-    FLAGCTE,  // Axe en vitesse constante
-    FLAGDEC,	// Axe en deceleration
-    FLAGSTO 	// Axe stoppe
-  };
+  typedef enum {
+    FLAGACC,	// Axis in acceleration
+    FLAGCTE,  // Axis at constant velocity
+    FLAGDEC,	// Axis in deceleration
+    FLAGSTO 	// Axis stopped
+  } status_t;
 
-//  std::vector<float> m_q_dot; // protected by mutex
-//  std::vector<float> m_q;     // Current position
-
-
-  std::vector<int>	 m_status;	    // Axis status
-  std::vector<double> m_deltaQmax;   // Increment de consigne maximum
-  std::vector<double> m_deltaQ;		  // Increment de consigne en cours
-  std::vector<double> m_Qacc;		    // Increment d'increment de consigne
-  std::vector<double> m_consFin;    	// Consigne finale (butee)
-  std::vector<int>   m_signeDep;	  // Signe du deplacement: +1 = incrementer consigne
-  std::array<double, 7> m_q_cmd;     // Joint position to apply in rad
-  std::array<double, 7> m_dq_cmd;   // Joint velocity to apply in rad
-  std::vector<double> m_dist_AD;		  // Distance requise pour acce et decel
-  std::vector<double> m_dq_des;		  // Desired velocity
-  std::vector<double> m_dq_des_old;
-  std::vector<double> m_ecart;		    // Difference entre consigne et consigne finale
-  std::vector<double> m_flagSpeed;
+  std::array<status_t, 7>	m_status;	     // Axis status
+  std::array<double, 7> m_delta_q;		   // Current position increment
+  std::array<double, 7> m_delta_q_max;   // Max position increment
+  std::array<double, 7> m_delta_q_acc;	 // Increment related to acceleration
+  std::array<double, 7> m_q_final;       // Final position before joint limit
+  std::array<int, 7>    m_sign;	         // Displacement sign: +1 = increment position
+  std::array<double, 7> m_q_cmd;         // Joint position command
+  std::array<double, 7> m_q_cmd_prev;    // Previous joint position command
+  std::array<double, 7> m_dist_AD;       // Distance required to accelerate or decelerate
+  std::array<double, 7> m_dq_des;		     // Desired velocity
+  std::array<double, 7> m_dq_des_prev;   // Previous desired velocity
+  std::array<double, 7> m_dist_to_final; // Distance between current joint position and final
+  std::array<bool, 7>   m_flagSpeed;
 
   // Constant
-  std::array<double, 7>  m_q_min;
-  std::array<double, 7>  m_q_max;
-  std::array<double, 7>  m_dq_max;
-  std::array<double, 7>  m_ddq_max;
+  std::array<double, 7> m_q_min;
+  std::array<double, 7> m_q_max;
+  std::array<double, 7> m_dq_max;
+  std::array<double, 7> m_ddq_max;
 
   size_t m_njoints;
-  float m_delta_t;
+  double m_delta_t;
 
   bool m_flagJointLimit;
 
-  const float m_offset_joint_limit = 0.01; // stop before joint limit
-  const float m_deltaQMin =	0.0001;	// Delta Q minimum (rad)
+  const double m_offset_joint_limit = 0.01; // stop before joint limit
+  const double m_delta_q_min =	0.0001;	// Delta Q minimum (rad)
 };
 
 #endif

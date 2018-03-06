@@ -142,12 +142,23 @@ void vpRobotFranka::getPosition(const vpRobot::vpControlFrameType frame, vpColVe
     throw(vpException(vpException::fatalError, "Cannot get Franka robot position: robot is not connected"));
   }
 
-  franka::RobotState state = m_handler->readOnce();
+  franka::RobotState robot_state;
+  if (! m_controlThreadRunning) {
+    robot_state = m_handler->readOnce();
+
+    std::lock_guard<std::mutex> lock(m_mutex);
+    m_robot_state = robot_state;
+  }
+  else { // robot_state is updated in the velocity control thread
+    std::lock_guard<std::mutex> lock(m_mutex);
+    robot_state = m_robot_state;
+  }
+
   switch(frame) {
   case JOINT_STATE: {
     joint.resize(nDof);
     for (int i=0; i < nDof; i++)
-      joint[i] = state.q_d[i];
+      joint[i] = robot_state.q_d[i];
     break;
   }
   default: {
@@ -170,10 +181,21 @@ void vpRobotFranka::getPosition(const vpRobot::vpControlFrameType frame, vpPoseV
     throw(vpException(vpException::fatalError, "Cannot get Franka robot position: robot is not connected"));
   }
 
-  franka::RobotState state = m_handler->readOnce();
+  franka::RobotState robot_state;
+  if (! m_controlThreadRunning) {
+    robot_state = m_handler->readOnce();
+
+    std::lock_guard<std::mutex> lock(m_mutex);
+    m_robot_state = robot_state;
+  }
+  else { // robot_state is updated in the velocity control thread
+    std::lock_guard<std::mutex> lock(m_mutex);
+    robot_state = m_robot_state;
+  }
+
   switch(frame) {
   case END_EFFECTOR_FRAME: {
-    std::array<double, 16> pose_array = m_handler->readOnce().O_T_EE;
+    std::array<double, 16> pose_array = robot_state.O_T_EE;
     vpHomogeneousMatrix fMe;
     for (unsigned int i=0; i< 4; i++) {
       for (unsigned int j=0; j< 4; j++) {
@@ -295,22 +317,14 @@ void vpRobotFranka::setVelocity(const vpRobot::vpControlFrameType frame, const v
       dq_des[i] = vel[i];
     }
 
-//    {
-//      std::cout << "DBG: in vpRobotFranka::setVelocity() m_dq_max: ";
-//      for(int i=0; i<7; i++) {
-//        std::cout << m_dq_max[i] << " ";
-//      }
-//      std::cout << std::endl;
-//    }
-
     if(! m_controlThreadRunning) {
+      m_controlThreadRunning = true;
       m_controlThread = std::thread(&vpJointVelTrajGenerator::control_thread, vpJointVelTrajGenerator(),
                                     m_handler, std::ref(m_controlThreadRunning), std::ref(dq_des),
-                                    std::cref(m_q_min), std::cref(m_q_max), std::cref(m_dq_max), std::cref(m_ddq_max));
+                                    std::cref(m_q_min), std::cref(m_q_max), std::cref(m_dq_max), std::cref(m_ddq_max),
+                                    std::ref(m_robot_state), std::ref(m_mutex));
     }
   }
-//  std::cout << "DBG: m_controlThreadRunning: " << m_controlThreadRunning << std::endl;
-
 }
 
 #elif !defined(VISP_BUILD_SHARED_LIBS)
