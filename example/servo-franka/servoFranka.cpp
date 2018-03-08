@@ -85,6 +85,8 @@ int main(int argc, char **argv)
       std::cout << "Move to joint position: " << q.t() << std::endl;
       robot.setPosition(vpRobot::JOINT_STATE, q);
 
+      robot.getPosition(vpRobot::JOINT_STATE, q);
+
       vpMatrix eJe;
       robot.get_eJe(eJe);
       std::cout << "eJe:\n" << eJe << std::endl;
@@ -94,7 +96,21 @@ int main(int argc, char **argv)
       vpColVector v = eJe * dq;
       std::cout << "dq: " << dq.t() << std::endl;
       std::cout << "v: " << v.t() << std::endl;
-      return 0;
+
+      vpMatrix fJe;
+      robot.get_fJe(fJe);
+      std::cout << "fJe:\n" << fJe << std::endl;
+
+      vpHomogeneousMatrix fMe = robot.get_fMe(q);
+      std::cout << "fMe:\n" << fMe << std::endl;
+
+      vpPoseVector fPe;
+      robot.getPosition(vpRobot::END_EFFECTOR_FRAME, fPe);
+      std::cout << "fMe pose vector: " << fPe.t() << std::endl;
+      std::cout << "fMe pose matrix: \n" << vpHomogeneousMatrix(fPe) << std::endl;
+
+      vpVelocityTwistMatrix fVe(fMe, false);
+      std::cout << "reconstructed eJe:\n" << fVe.inverse() * fJe << std::endl;
 
       robot.setRobotState(vpRobot::STATE_VELOCITY_CONTROL);
 

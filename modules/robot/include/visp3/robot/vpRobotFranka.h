@@ -77,7 +77,7 @@ private:
     This function is not implemented.
    */
   void getDisplacement(const vpRobot::vpControlFrameType frame, vpColVector &q) {};
-//  inline franka::RobotState getRobotInternalState(); // TODO bug check why the robot moves
+  franka::RobotState getRobotInternalState();
   void init();
 
   franka::Robot *m_handler; //!< Robot handler
@@ -94,6 +94,8 @@ private:
   franka::RobotState m_robot_state; // Robot state protected by mutex
   std::mutex m_mutex;               // Mutex to protect m_robot_state
 
+  std::array<double, 7> m_dq_des;   // Desired joint velocity
+
 public:
   vpRobotFranka();
 
@@ -105,8 +107,10 @@ public:
   void connect(const std::string &franka_address,
                franka::RealtimeConfig realtime_config = franka::RealtimeConfig::kEnforce);
 
+  vpHomogeneousMatrix get_fMe(const vpColVector &q);
+
   void get_eJe(vpMatrix &eJe);
-  void get_fJe(vpMatrix &);
+  void get_fJe(vpMatrix &fJe);
 
   /*!
    * Get robot handler to access native libfranka functions.
@@ -130,27 +134,6 @@ public:
   vpRobot::vpRobotStateType setRobotState(vpRobot::vpRobotStateType newState);
   void setVelocity(const vpRobot::vpControlFrameType frame, const vpColVector &vel);
 };
-
-// TODO bug check why the robot moves
-//franka::RobotState vpRobotFranka::getRobotInternalState()
-//{
-//  if (!m_handler) {
-//    throw(vpException(vpException::fatalError, "Cannot get Franka robot state: robot is not connected"));
-//  }
-//  franka::RobotState robot_state;
-//  if (! m_controlThreadRunning) {
-//    robot_state = m_handler->readOnce();
-
-//    std::lock_guard<std::mutex> lock(m_mutex);
-//    m_robot_state = robot_state;
-//  }
-//  else { // robot_state is updated in the velocity control thread
-//    std::lock_guard<std::mutex> lock(m_mutex);
-//    robot_state = m_robot_state;
-//  }
-
-//  return robot_state;
-//}
 
 #endif
 #endif // #ifndef __vpRobotFranka_h__

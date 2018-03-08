@@ -54,7 +54,7 @@
 vpRobotFranka::vpRobotFranka()
   : vpRobot(), m_handler(NULL), m_positionningVelocity(20.), m_controlThread(), m_controlThreadRunning(false),
     m_q_min(), m_q_max(), m_dq_max(), m_ddq_max(), m_robot_state(),
-    m_mutex()
+    m_mutex(), m_dq_des()
 {
   init();
 }
@@ -145,19 +145,7 @@ void vpRobotFranka::getPosition(const vpRobot::vpControlFrameType frame, vpColVe
     throw(vpException(vpException::fatalError, "Cannot get Franka robot position: robot is not connected"));
   }
 
-  // franka::RobotState robot_state = getRobotInternalState(); // TODO bug check why robot moves
-
-  franka::RobotState robot_state;
-  if (! m_controlThreadRunning) {
-    robot_state = m_handler->readOnce();
-
-    std::lock_guard<std::mutex> lock(m_mutex);
-    m_robot_state = robot_state;
-  }
-  else { // robot_state is updated in the velocity control thread
-    std::lock_guard<std::mutex> lock(m_mutex);
-    robot_state = m_robot_state;
-  }
+  franka::RobotState robot_state = getRobotInternalState();
 
   switch(frame) {
   case JOINT_STATE: {
@@ -174,6 +162,42 @@ void vpRobotFranka::getPosition(const vpRobot::vpControlFrameType frame, vpColVe
 }
 
 /*!
+ * Given the joint position of the robot, computes the forward kinematics (direct geometric model) as an
+ * homogeneous matrix \f${^f}{\bf M}_e\f$ that gives the position of the end-effector in the robot base frame.
+ *
+ * \param[in] q : Joint position as a 7-dim vector.
+ * \return Position of the end-effector in the robot base frame.
+ */
+vpHomogeneousMatrix vpRobotFranka::get_fMe(const vpColVector &q)
+{
+  if (!m_handler) {
+    throw(vpException(vpException::fatalError, "Cannot get Franka robot position: robot is not connected"));
+  }
+  if (q.size() != (unsigned int)nDof) {
+    throw(vpException(vpException::fatalError, "Joint position is not a %d-dim vector", q.size()));
+  }
+
+  franka::Model model = m_handler->loadModel(); // TODO see if this function cost time
+
+  std::array< double, 7 > q_array;
+  for (size_t i = 0; i < (size_t)nDof; i++)
+    q_array[i] = q[i];
+
+  franka::RobotState robot_state = getRobotInternalState();
+
+  std::array<double, 16> pose_array = model.pose(franka::Frame::kEndEffector, q_array, robot_state.F_T_EE, robot_state.EE_T_K);
+  vpHomogeneousMatrix fMe;
+  for (unsigned int i=0; i< 4; i++) {
+    for (unsigned int j=0; j< 4; j++) {
+      fMe[i][j] = pose_array[j*4 + i];
+    }
+  }
+
+  return fMe;
+}
+
+
+/*!
  * Get robot cartesian position.
  * \param[in] frame Type of cartesian position to retrieve.
  * \param[out] pose Robot cartesian position.
@@ -186,19 +210,7 @@ void vpRobotFranka::getPosition(const vpRobot::vpControlFrameType frame, vpPoseV
     throw(vpException(vpException::fatalError, "Cannot get Franka robot position: robot is not connected"));
   }
 
-  // franka::RobotState robot_state = getRobotInternalState(); // TODO bug check why robot moves
-
-  franka::RobotState robot_state;
-  if (! m_controlThreadRunning) {
-    robot_state = m_handler->readOnce();
-
-    std::lock_guard<std::mutex> lock(m_mutex);
-    m_robot_state = robot_state;
-  }
-  else { // robot_state is updated in the velocity control thread
-    std::lock_guard<std::mutex> lock(m_mutex);
-    robot_state = m_robot_state;
-  }
+  franka::RobotState robot_state = getRobotInternalState();
 
   switch(frame) {
   case END_EFFECTOR_FRAME: {
@@ -225,21 +237,9 @@ void vpRobotFranka::get_eJe(vpMatrix &eJe)
     throw(vpException(vpException::fatalError, "Cannot get Franka robot position: robot is not connected"));
   }
 
-  // franka::RobotState robot_state = getRobotInternalState(); // TODO bug check why robot moves
+  franka::RobotState robot_state = getRobotInternalState();
 
-  franka::RobotState robot_state;
-  if (! m_controlThreadRunning) {
-    robot_state = m_handler->readOnce();
-
-    std::lock_guard<std::mutex> lock(m_mutex);
-    m_robot_state = robot_state;
-  }
-  else { // robot_state is updated in the velocity control thread
-    std::lock_guard<std::mutex> lock(m_mutex);
-    robot_state = m_robot_state;
-  }
-
-  franka::Model model = m_handler->loadModel(); // TODO see if this function cost time
+  franka::Model model = m_handler->loadModel();
 
   std::array<double, 42> jacobian = model.bodyJacobian(franka::Frame::kEndEffector, robot_state); // column-major
   eJe.resize(6, 7); // row-major
@@ -250,7 +250,6 @@ void vpRobotFranka::get_eJe(vpMatrix &eJe)
   }
   // TODO check from vpRobot fJe and fJeAvailable
 
-  //std::memcpy(eJe.data, jacobian, 42*sizeof(double)); // TODO optimize
 }
 
 void vpRobotFranka::get_fJe(vpMatrix &fJe)
@@ -259,19 +258,7 @@ void vpRobotFranka::get_fJe(vpMatrix &fJe)
     throw(vpException(vpException::fatalError, "Cannot get Franka robot position: robot is not connected"));
   }
 
-  // franka::RobotState robot_state = getRobotInternalState(); // TODO bug check why robot moves
-
-  franka::RobotState robot_state;
-  if (! m_controlThreadRunning) {
-    robot_state = m_handler->readOnce();
-
-    std::lock_guard<std::mutex> lock(m_mutex);
-    m_robot_state = robot_state;
-  }
-  else { // robot_state is updated in the velocity control thread
-    std::lock_guard<std::mutex> lock(m_mutex);
-    robot_state = m_robot_state;
-  }
+  franka::RobotState robot_state = getRobotInternalState();
 
   franka::Model model = m_handler->loadModel(); // TODO see if this function cost time
 
@@ -283,8 +270,6 @@ void vpRobotFranka::get_fJe(vpMatrix &fJe)
     }
   }
   // TODO check from vpRobot fJe and fJeAvailable
-
-//  std::memcpy(fJe.data, jacobian, 42*sizeof(double)); // TODO optimize
 }
 
 
@@ -383,24 +368,45 @@ void vpRobotFranka::setVelocity(const vpRobot::vpControlFrameType frame, const v
   }
 
   {
-    std::array<double, 7> dq_des;
-    if (dq_des.size() != vel.size()) {
+//    std::array<double, 7> dq_des;
+    if (m_dq_des.size() != vel.size()) {
       throw vpRobotException(vpRobotException::wrongStateError,
                              "Joint velocity vector (%d) is not of size 7", vel.size());
 
     }
-    for (size_t i = 0; i < dq_des.size(); i++) {
-      dq_des[i] = vel[i];
+    for (size_t i = 0; i < m_dq_des.size(); i++) {
+      m_dq_des[i] = vel[i];
     }
 
     if(! m_controlThreadRunning) {
       m_controlThreadRunning = true;
       m_controlThread = std::thread(&vpJointVelTrajGenerator::control_thread, vpJointVelTrajGenerator(),
-                                    m_handler, std::ref(m_controlThreadRunning), std::ref(dq_des),
+                                    std::ref(m_handler), std::ref(m_controlThreadRunning), std::ref(m_dq_des),
                                     std::cref(m_q_min), std::cref(m_q_max), std::cref(m_dq_max), std::cref(m_ddq_max),
                                     std::ref(m_robot_state), std::ref(m_mutex));
     }
   }
+}
+
+franka::RobotState vpRobotFranka::getRobotInternalState()
+{
+  if (!m_handler) {
+    throw(vpException(vpException::fatalError, "Cannot get Franka robot state: robot is not connected"));
+  }
+  franka::RobotState robot_state;
+
+  if (! m_controlThreadRunning) {
+    robot_state = m_handler->readOnce();
+
+    std::lock_guard<std::mutex> lock(m_mutex);
+    m_robot_state = robot_state;
+  }
+  else { // robot_state is updated in the velocity control thread
+    std::lock_guard<std::mutex> lock(m_mutex);
+    robot_state = m_robot_state;
+  }
+
+  return robot_state;
 }
 
 #elif !defined(VISP_BUILD_SHARED_LIBS)

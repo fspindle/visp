@@ -111,6 +111,8 @@ void vpJointVelTrajGenerator::control_thread(franka::Robot *robot,
 
     joint_vel_traj_generator.applyVel(dq_des_, q_cmd, dq_cmd);
 
+//    std::cout << "DBG apply joint vel: " << dq_cmd[0] << " " << dq_cmd[1] << " " <<  dq_cmd[2] << " " <<  dq_cmd[3] << " " <<  dq_cmd[4] << " " <<  dq_cmd[5]<< " " <<  dq_cmd[6] << std::endl;
+
     franka::JointVelocities velocities = {dq_cmd[0], dq_cmd[1], dq_cmd[2], dq_cmd[3], dq_cmd[4], dq_cmd[5], dq_cmd[6]};
 
     static bool display_dbg = true;
