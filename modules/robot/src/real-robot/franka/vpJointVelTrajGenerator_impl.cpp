@@ -76,25 +76,19 @@ void vpJointVelTrajGenerator::control_thread(franka::Robot *robot,
 
   double time = 0.0;
   double delta_t = 0.001;
+  std::array<double, 7> q_prev;
 
-  franka::RobotState state = robot->readOnce();
-  {
-    std::lock_guard<std::mutex> lock(mutex);
-    robot_state = state;
-  }
-
-  auto q = state.q_d; // Initial measured position (should be insite joint limits)
-
-  vpJointVelTrajGenerator joint_vel_traj_generator;
-
-  joint_vel_traj_generator.init(q, q_min, q_max, dq_max, ddq_max, delta_t);
-
-  auto q_prev = q;
-
-  auto joint_velocity_callback = [=, &time, &joint_vel_traj_generator, &q_prev, &dq_des, &running, &robot_state, &mutex]
+  auto joint_velocity_callback = [=, &time, &q_prev, &dq_des, &running, &robot_state, &mutex]
       (const franka::RobotState& state, franka::Duration period) -> franka::JointVelocities {
-    // Update time.
+
     time += period.toSec();
+
+    static vpJointVelTrajGenerator joint_vel_traj_generator;
+
+    if (time == 0.0) {
+      q_prev = state.q_d;
+      joint_vel_traj_generator.init(state.q_d, q_min, q_max, dq_max, ddq_max, delta_t);
+    }
 
     {
       std::lock_guard<std::mutex> lock(mutex);
