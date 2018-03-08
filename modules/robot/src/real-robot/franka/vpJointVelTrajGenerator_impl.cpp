@@ -91,9 +91,11 @@ void vpJointVelTrajGenerator::control_thread(franka::Robot *robot,
 
   auto q_prev = q;
 
-  robot->control([=, &time, &joint_vel_traj_generator, &q_prev, &dq_des, &running, &robot_state, &mutex](const franka::RobotState& state,
-                 franka::Duration period) -> franka::JointVelocities {
+  auto joint_velocity_callback = [=, &time, &joint_vel_traj_generator, &q_prev, &dq_des, &running, &robot_state, &mutex]
+      (const franka::RobotState& state, franka::Duration period) -> franka::JointVelocities {
+    // Update time.
     time += period.toSec();
+
     {
       std::lock_guard<std::mutex> lock(mutex);
       robot_state = state;
@@ -150,7 +152,10 @@ void vpJointVelTrajGenerator::control_thread(franka::Robot *robot,
     // Note that if the robot does not receive a command it will try to extrapolate
     // the desired behavior assuming a constant acceleration model
     return limitRate(ddq_max, velocities.dq, state.dq_d);
-  });
+  };
+
+  robot->control(joint_velocity_callback);
+
 }
 #endif // VISP_HAVE_FRANKA
 

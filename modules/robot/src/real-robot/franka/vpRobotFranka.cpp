@@ -368,11 +368,9 @@ void vpRobotFranka::setVelocity(const vpRobot::vpControlFrameType frame, const v
   }
 
   {
-//    std::array<double, 7> dq_des;
     if (m_dq_des.size() != vel.size()) {
       throw vpRobotException(vpRobotException::wrongStateError,
                              "Joint velocity vector (%d) is not of size 7", vel.size());
-
     }
     for (size_t i = 0; i < m_dq_des.size(); i++) {
       m_dq_des[i] = vel[i];
