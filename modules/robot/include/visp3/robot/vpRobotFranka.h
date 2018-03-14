@@ -84,7 +84,8 @@ private:
   double m_positionningVelocity;
 
   std::thread m_controlThread;
-  std::atomic_bool m_controlThreadRunning;
+  std::atomic_bool m_controlThreadIsRunning;
+  std::atomic_bool m_controlThreadStopAsked;
 
   std::array<double, 7> m_q_min;    // Joint min position
   std::array<double, 7> m_q_max;    // Joint max position
@@ -95,6 +96,7 @@ private:
   std::mutex m_mutex;               // Mutex to protect m_robot_state
 
   std::array<double, 7> m_dq_des;   // Desired joint velocity
+  vpColVector m_ve_des;             // Desired cartesian end-effector velocity
 
 public:
   vpRobotFranka();

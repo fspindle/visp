@@ -52,7 +52,7 @@
 
 */
 vpRobotFranka::vpRobotFranka()
-  : vpRobot(), m_handler(NULL), m_positionningVelocity(20.), m_controlThread(), m_controlThreadRunning(false),
+  : vpRobot(), m_handler(NULL), m_positionningVelocity(20.), m_controlThread(), m_controlThreadIsRunning(false),
     m_q_min(), m_q_max(), m_dq_max(), m_ddq_max(), m_robot_state(),
     m_mutex(), m_dq_des()
 {
@@ -66,12 +66,12 @@ vpRobotFranka::vpRobotFranka()
  * be set when required. Setting realtime_config to kIgnore disables this behavior.
  */
 vpRobotFranka::vpRobotFranka(const std::string &franka_address, franka::RealtimeConfig realtime_config)
-  : vpRobot(), m_handler(NULL), m_positionningVelocity(20.), m_controlThread(), m_controlThreadRunning(false),
+  : vpRobot(), m_handler(NULL), m_positionningVelocity(20.), m_controlThread(), m_controlThreadIsRunning(false),
     m_q_min(), m_q_max(), m_dq_max(), m_ddq_max(), m_robot_state(),
-    m_mutex()
+    m_mutex(), m_dq_des(), m_ve_des()
 {
   init();
-  connect(franka_address, realtime_config);  
+  connect(franka_address, realtime_config);
 }
 
 /*!
@@ -85,6 +85,15 @@ void vpRobotFranka::init()
   m_q_max   = std::array<double, 7> {12.8973, 1.7628, 2.8973, 0.0175, 2.8973, 3.7525, 2.8973};
   m_dq_max  = std::array<double, 7> {2.1750, 2.1750, 2.1750, 2.1750, 2.6100, 2.6100, 2.6100};
   m_ddq_max = std::array<double, 7> {14.25, 7.125, 11.875, 11.875, 14.25, 19.0, 19.0};
+
+  {
+    // TODO reduce security joint position offset
+    double offset = vpMath::rad(10);//
+    for (auto q : m_q_min)
+      q += offset;
+    for (auto q : m_q_max)
+      q -= offset;
+  }
 }
 
 /*!
@@ -97,9 +106,9 @@ vpRobotFranka::~vpRobotFranka()
   std::cout << "DBG: call destructor -----------------------" << std::endl;
   setRobotState(vpRobot::STATE_STOP);
 
-//  if (m_controlThread.joinable()) {
-//    m_controlThread.join();
-//  }
+  //  if (m_controlThread.joinable()) {
+  //    m_controlThread.join();
+  //  }
   if (m_handler)
     delete m_handler;
 }
@@ -121,14 +130,28 @@ void vpRobotFranka::connect(const std::string &franka_address, franka::RealtimeC
 
   m_handler = new franka::Robot(franka_address, realtime_config);
 
+  std::array<double, 7> lower_torque_thresholds_nominal{
+      {25.0, 25.0, 22.0, 20.0, 19.0, 17.0, 14.}};
+  std::array<double, 7> upper_torque_thresholds_nominal{
+      {35.0, 35.0, 32.0, 30.0, 29.0, 27.0, 24.0}};
+  std::array<double, 7> lower_torque_thresholds_acceleration{
+      {25.0, 25.0, 22.0, 20.0, 19.0, 17.0, 14.0}};
+  std::array<double, 7> upper_torque_thresholds_acceleration{
+      {35.0, 35.0, 32.0, 30.0, 29.0, 27.0, 24.0}};
+  std::array<double, 6> lower_force_thresholds_nominal{{30.0, 30.0, 30.0, 25.0, 25.0, 25.0}};
+  std::array<double, 6> upper_force_thresholds_nominal{{40.0, 40.0, 40.0, 35.0, 35.0, 35.0}};
+  std::array<double, 6> lower_force_thresholds_acceleration{{30.0, 30.0, 30.0, 25.0, 25.0, 25.0}};
+  std::array<double, 6> upper_force_thresholds_acceleration{{40.0, 40.0, 40.0, 35.0, 35.0, 35.0}};
   m_handler->setCollisionBehavior(
-      {{20.0, 20.0, 20.0, 20.0, 20.0, 20.0, 20.0}}, {{20.0, 20.0, 20.0, 20.0, 20.0, 20.0, 20.0}},
-      {{10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0}}, {{10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0}},
-      {{20.0, 20.0, 20.0, 20.0, 20.0, 20.0}}, {{20.0, 20.0, 20.0, 20.0, 20.0, 20.0}},
-      {{10.0, 10.0, 10.0, 10.0, 10.0, 10.0}}, {{10.0, 10.0, 10.0, 10.0, 10.0, 10.0}});
+        lower_torque_thresholds_acceleration, upper_torque_thresholds_acceleration,
+        lower_torque_thresholds_nominal, upper_torque_thresholds_nominal,
+        lower_force_thresholds_acceleration, upper_force_thresholds_acceleration,
+        lower_force_thresholds_nominal, upper_force_thresholds_nominal);
+
   m_handler->setJointImpedance({{3000, 3000, 3000, 2500, 2500, 2000, 2000}});
   m_handler->setCartesianImpedance({{3000, 3000, 3000, 300, 300, 300}});
-  m_handler->setFilters(100, 100, 100, 100, 100);
+//  m_handler->setFilters(100, 100, 100, 100, 100);
+  m_handler->setFilters(10, 10, 10, 10, 10);
 }
 
 /*!
@@ -321,8 +344,8 @@ vpRobot::vpRobotStateType vpRobotFranka::setRobotState(vpRobot::vpRobotStateType
     // Start primitive STOP only if the current state is Velocity
     if (vpRobot::STATE_VELOCITY_CONTROL == getRobotState()) {
       // Stop the robot
-      std::cout << "DBG: ask to stop the thread setting m_controlThreadRunning = false" << std::endl;
-      m_controlThreadRunning = false;
+      std::cout << "DBG: ask to stop the thread setting m_controlThreadStopAsked = false" << std::endl;
+      m_controlThreadStopAsked = true;
       if(m_controlThread.joinable()) {
         std::cout << "DBG: Stop joint vel thread to stop the robot" << std::endl;
         m_controlThread.join();
@@ -335,6 +358,8 @@ vpRobot::vpRobotStateType vpRobotFranka::setRobotState(vpRobot::vpRobotStateType
     if (vpRobot::STATE_VELOCITY_CONTROL == getRobotState()) {
       std::cout << "Change the control mode from velocity to position control.\n";
       // Stop the robot
+      std::cout << "DBG: ask to stop the thread setting m_controlThreadStopAsked = false" << std::endl;
+      m_controlThreadStopAsked = true;
       if(m_controlThread.joinable()) {
         std::cout << "DBG: Stop joint vel thread to swith to position control" << std::endl;
         m_controlThread.join();
@@ -348,7 +373,6 @@ vpRobot::vpRobotStateType vpRobotFranka::setRobotState(vpRobot::vpRobotStateType
       std::cout << "Change the control mode from stop to velocity control.\n";
     }
     std::cout << "DBG: Start joint vel thread" << std::endl;
-    //m_threadJointVel = std::thread(jointVel_thread);
 
     break;
   }
@@ -367,22 +391,60 @@ void vpRobotFranka::setVelocity(const vpRobot::vpControlFrameType frame, const v
                            "Use setRobotState(vpRobot::STATE_VELOCITY_CONTROL) first.");
   }
 
-  {
-    if (m_dq_des.size() != vel.size()) {
+  switch (frame) {
+  // Saturation in joint space
+  case JOINT_STATE: {
+    if (vel.size() != (unsigned int)nDof) {
       throw vpRobotException(vpRobotException::wrongStateError,
                              "Joint velocity vector (%d) is not of size 7", vel.size());
     }
-    for (size_t i = 0; i < m_dq_des.size(); i++) {
-      m_dq_des[i] = vel[i];
+
+    vpColVector vel_max(nDof, getMaxRotationVelocity());
+
+    vpColVector vel_sat = vpRobot::saturateVelocities(vel, vel_max, true);
+
+    for (size_t i = 0; i < m_dq_des.size(); i++) { // TODO create a function to convert
+      m_dq_des[i] = vel_sat[i];
     }
 
-    if(! m_controlThreadRunning) {
-      m_controlThreadRunning = true;
-      m_controlThread = std::thread(&vpJointVelTrajGenerator::control_thread, vpJointVelTrajGenerator(),
-                                    std::ref(m_handler), std::ref(m_controlThreadRunning), std::ref(m_dq_des),
-                                    std::cref(m_q_min), std::cref(m_q_max), std::cref(m_dq_max), std::cref(m_ddq_max),
-                                    std::ref(m_robot_state), std::ref(m_mutex));
+    break;
+  }
+
+    // Saturation in cartesian space
+  case vpRobot::END_EFFECTOR_FRAME: {
+    if (vel.size() != 6) {
+      throw vpRobotException(vpRobotException::wrongStateError,
+                             "Cartesian velocity vector (%d) is not of size 6", vel.size());
     }
+    vpColVector vel_max(6);
+
+    for (unsigned int i = 0; i < 3; i++)
+      vel_max[i] = getMaxTranslationVelocity();
+    for (unsigned int i = 3; i < 6; i++)
+      vel_max[i] = getMaxRotationVelocity();
+
+    m_ve_des = vpRobot::saturateVelocities(vel, vel_max, true);
+
+    break;
+  }
+
+  case vpRobot::CAMERA_FRAME:
+  case vpRobot::REFERENCE_FRAME:
+  case vpRobot::MIXT_FRAME: {
+    throw vpRobotException(vpRobotException::wrongStateError,
+                           "Velocity controller not supported");
+    break;
+  }
+  }
+
+  if(! m_controlThreadIsRunning) {
+    m_controlThreadIsRunning = true;
+    std::cout << "DBG: Start control thread... ++++++++++++++++++++" << std::endl;
+    m_controlThread = std::thread(&vpJointVelTrajGenerator::control_thread, vpJointVelTrajGenerator(),
+                                  std::ref(m_handler), std::ref(m_controlThreadStopAsked),
+                                  frame, std::ref(m_ve_des), std::ref(m_dq_des),
+                                  std::cref(m_q_min), std::cref(m_q_max), std::cref(m_dq_max), std::cref(m_ddq_max),
+                                  std::ref(m_robot_state), std::ref(m_mutex));
   }
 }
 
@@ -393,7 +455,8 @@ franka::RobotState vpRobotFranka::getRobotInternalState()
   }
   franka::RobotState robot_state;
 
-  if (! m_controlThreadRunning) {
+  if (! m_controlThreadIsRunning) {
+    std::cout << "DBG: get robot state using readOnce()" << std::endl;
     robot_state = m_handler->readOnce();
 
     std::lock_guard<std::mutex> lock(m_mutex);

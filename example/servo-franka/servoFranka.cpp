@@ -57,6 +57,33 @@
 #include <visp3/robot/vpRobotFranka.h>
 #include <visp3/gui/vpPlot.h>
 
+
+void plot_joint_position(vpRobotFranka *robot, bool &end)
+{
+  vpPlot plotter(1, 600, 600);
+  plotter.initGraph(0, 7);
+  for (size_t i = 0; i < 7; i++) {
+    std::stringstream ss;
+    ss << "q" << i;
+    plotter.setLegend(0, i, ss.str());
+  }
+
+  vpColVector q;
+  std::ofstream f("joint-pos-plotted.log");
+
+  unsigned long iter = 0;
+  while( !end) {
+    robot->getPosition(vpRobot::JOINT_STATE, q);
+    f << std::fixed << std::setprecision(8) << q.t() << std::endl;
+    plotter.plot(0, iter, q);
+    vpTime::wait(10);
+    iter ++;
+  }
+  f.close();
+  std::cout << "End of plot thread. Wait for a click to quit" << std::endl;
+  vpDisplay::getClick(plotter.I);
+}
+
 int main(int argc, char **argv)
 {
   if (argc != 2) {
@@ -76,9 +103,10 @@ int main(int argc, char **argv)
       std::cout << "Initial joint position: " << q.t() << std::endl;
 
       q[0] = 0;
-      q[1] = -M_PI_4;
+//      q[1] = -M_PI_4;
+      q[1] = 0;
       q[2] = 0;
-      q[3] = -3 * M_PI_4;
+      q[3] = -M_PI_2; //-3 * M_PI_4;
       q[4] = 0;
       q[5] = M_PI_2;
       q[6] = M_PI_4;
@@ -114,15 +142,137 @@ int main(int argc, char **argv)
 
       robot.setRobotState(vpRobot::STATE_VELOCITY_CONTROL);
 
+#if 0
+      /*
+       * Test to send a trapezoid joint velocity
+       */
+      bool end_thread = false;
+      std::thread plot_thread(&plot_joint_position, &robot, std::ref(end_thread));
+      double t0 = vpTime::measureTimeSecond();
+      vpColVector qdot(7), qdot_max(7);
+      qdot_max = vpMath::rad(5);
+      qdot_max[2] = vpMath::rad(4);
+      double T = 2;
+      double deltaT = 0.1;
+      qdot = 0;
+
+      do {
+#if 0
+        if (vpTime::measureTimeSecond() - t0 < T) {
+          qdot[6] += qdot_max[6]/T*deltaT;
+        }
+        else if (vpTime::measureTimeSecond() - t0 < 2*T) {
+          qdot[6] = qdot_max[6];
+        }
+        else if (vpTime::measureTimeSecond() - t0 < 3*T) {
+          qdot[6] -= qdot_max[6]/T*deltaT;
+        }
+        else {
+          qdot[6] = 0;
+        }
+#else
+        if (vpTime::measureTimeSecond() - t0 < T) {
+          qdot[2] = qdot_max[2];
+          qdot[6] = qdot_max[6];
+        }
+        else if (vpTime::measureTimeSecond() - t0 < 2*T) {
+          qdot[2] = -qdot_max[2];
+          qdot[6] = -qdot_max[6];
+        }
+        else if (vpTime::measureTimeSecond() - t0 < 3*T) {
+          qdot[2] = 0;
+          qdot[6] = 0;
+        }
+
+#endif
+        std::cout << "qdot[6]: " << qdot[6] << std::endl;
+        robot.setVelocity(vpRobot::JOINT_STATE, qdot);
+        vpTime::wait(deltaT * 1000);
+      } while (vpTime::measureTimeSecond() - t0 < 2*T);
+      robot.setRobotState(vpRobot::STATE_STOP);
+      end_thread = true;
+      plot_thread.join();
+
+      return EXIT_SUCCESS;
+#endif
+
+#if 0 // Lead to small oscillations
+      /*
+       * Test cartesian velocity using the inverse Jacobian
+       */
+
+      bool end_thread = false;
+      std::thread plot_thread(&plot_joint_position, &robot, std::ref(end_thread));
+      double t0 = vpTime::measureTimeSecond();
+      vpColVector qdot;
+      vpColVector ve(6);
+//      ve[0] = 0.01; // vx goes toward the user
+      ve[1] = 0.01; // vy goes left
+//      ve[2] = -0.01; // vz goes down
+//      ve[3] = vpMath::rad(5); // wx
+//      ve[4] = vpMath::rad(5); // wy
+//      ve[5] = vpMath::rad(5); // wz
+
+      do {
+        robot.get_eJe(eJe);
+
+        // Turn elbow off
+//        for(size_t i=0; i<6; i++) {
+//          eJe[i][2] = 0.0;
+//        }
+
+        qdot = eJe.pseudoInverse() * ve;
+
+        robot.setVelocity(vpRobot::JOINT_STATE, qdot);
+        vpTime::wait(100);
+      } while (vpTime::measureTimeSecond() - t0 < 5);
+      robot.setRobotState(vpRobot::STATE_STOP);
+      end_thread = true;
+      plot_thread.join();
+
+      return EXIT_SUCCESS;
+#endif
+
+#if 1 // Lead to small oscillations
+      /*
+       * Test cartesian velocity using the inverse Jacobian
+       */
+
+      bool end_thread = false;
+      std::thread plot_thread(&plot_joint_position, &robot, std::ref(end_thread));
+      double t0 = vpTime::measureTimeSecond();
+      vpColVector qdot;
+      vpColVector ve(6);
+//      ve[0] = 0.01; // vx goes toward the user
+//      ve[1] = 0.01; // vy goes left
+      ve[2] = -0.02; // vz goes down
+//      ve[3] = vpMath::rad(5); // wx
+//      ve[4] = vpMath::rad(5); // wy
+//      ve[5] = vpMath::rad(5); // wz
+
+      do {
+        robot.setVelocity(vpRobot::END_EFFECTOR_FRAME, ve);
+        vpTime::wait(100);
+      } while (vpTime::measureTimeSecond() - t0 < 4);
+      robot.setRobotState(vpRobot::STATE_STOP);
+      end_thread = true;
+      plot_thread.join();
+
+      return EXIT_SUCCESS;
+#endif
+
+      /*
+       * Test joint velocity
+       */
       vpPlot plotter(1, 600, 600);
       plotter.initGraph(0, 7);
       for (size_t i = 0; i < 7; i++) {
         std::stringstream ss;
-        ss << "q" + i;
+        ss << "q" << i;
         plotter.setLegend(0, i, ss.str());
       }
 
-      double t0 = vpTime::measureTimeSecond();
+      t0 = vpTime::measureTimeSecond();
 //      qd_d[5] = vpMath::rad(-10.);
       qd_d[6] = vpMath::rad(5.);
       std::cout << "DBG: main() new vel sent to thread: " << qd_d.t() << std::endl;

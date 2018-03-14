@@ -45,6 +45,7 @@
 #include <atomic>
 
 #include <visp3/core/vpConfig.h>
+#include <visp3/robot/vpRobot.h>
 
 #ifdef VISP_HAVE_FRANKA
 #include <franka/exception.h>
@@ -69,7 +70,9 @@ public:
                 std::array<double, 7> &dq_cmd);
 
 #ifdef VISP_HAVE_FRANKA
-  void control_thread(franka::Robot *robot, std::atomic_bool &running,
+  void control_thread(franka::Robot *robot, std::atomic_bool &stop,
+                      const vpRobot::vpControlFrameType &frame,
+                      const vpColVector &ve_des,
                       const std::array<double, 7> &dq_des,
                       const std::array<double, 7> &q_min,
                       const std::array<double, 7> &q_max,
