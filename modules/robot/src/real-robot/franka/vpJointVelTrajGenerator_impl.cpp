@@ -242,10 +242,88 @@ void vpJointVelTrajGenerator::control_thread(franka::Robot *robot,
     return limitRate(ddq_max, velocities.dq, state.dq_d);
   };
 
+  auto joint_velocity_callback_using_position = [=, &log, &time, &q_prev, &dq_des, &stop, &robot_state, &mutex]
+      (const franka::RobotState& state, franka::Duration period) -> franka::JointPositions {
+
+    time += period.toSec();
+
+    static vpJointVelTrajGenerator joint_vel_traj_generator;
+
+    if (time == 0.0) {
+      q_prev = state.q_d;
+      joint_vel_traj_generator.init(state.q_d, q_min, q_max, dq_max, ddq_max, delta_t);
+    }
+
+    {
+      std::lock_guard<std::mutex> lock(mutex);
+      robot_state = state;
+    }
+
+    std::array<double, 7> q_cmd;
+    std::array<double, 7> dq_cmd;
+
+    auto dq_des_ = dq_des;
+    if (stop) { // Stop asked
+      for (auto & dq_ : dq_des_) {
+        dq_ = 0.0;
+      }
+      std::cout << "DBG: stop asked setting dq_des_: " << dq_des_[0] << " " << dq_des_[1] << " " << dq_des_[2] << " " << dq_des_[3] << " " << dq_des_[4] << " " << dq_des_[5] << " " << dq_des_[6] << std::endl;
+    }
+
+    joint_vel_traj_generator.applyVel(dq_des_, q_cmd, dq_cmd);
+
+//    std::cout << "DBG apply joint pos: " << q_cmd[0] << " " << q_cmd[1] << " " << q_cmd[2] << " " << q_cmd[3] << " " << q_cmd[4] << " " << q_cmd[5] << " " << q_cmd[6] << std::endl;
+
+
+    log << std::fixed << std::setprecision(8) << q_cmd[0] << " " << q_cmd[1] << " " << q_cmd[2] << " " << q_cmd[3] << " " << q_cmd[4] << " " << q_cmd[5] << " " << q_cmd[6] << std::endl;
+
+    franka::JointPositions positions = {q_cmd[0], q_cmd[1], q_cmd[2], q_cmd[3], q_cmd[4], q_cmd[5], q_cmd[6]};
+
+    static bool display_dbg = true;
+    if (stop) {
+      if (display_dbg) {
+        std::cout << std::endl << "DBG: control_thread() asked to finish waiting for joint stop" << std::endl;
+        display_dbg = false;
+      }
+      unsigned int stop = 0;
+      static int cpt_dbg = 0;
+      const double q_eps = (1.0/100000.);
+      for(size_t i=0; i < 7; i++) {
+        if (std::abs(state.q_d[i] - q_prev[i]) < q_eps) {
+          stop ++;
+        }
+      }
+      cpt_dbg ++;
+
+      std::cout << "DBG: stop iter " << cpt_dbg << " dq_cmd[6]: " << dq_cmd[6] << " state.q_d[6]: " << state.q_d[6] << " q_prev[6]: " << q_prev[6] << std::endl;
+      if (stop == 7) {
+        std::cout << std::endl << "DBG: control_thread() all joints are stopped after " << cpt_dbg << " iter, shutting down example" << std::endl;
+        log.close();
+        return franka::MotionFinished(positions);
+      }
+    }
+    else {
+      display_dbg = true;
+    }
+
+    q_prev = state.q_d;
+
+    // state.q_d contains the last joint velocity command received by the robot.
+    // In case of packet loss due to bad connection or due to a slow control loop
+    // not reaching the 1kHz rate, even if your desired velocity trajectory
+    // is smooth, discontinuities might occur.
+    // Saturating the acceleration computed with respect to the last command received
+    // by the robot will prevent from getting discontinuity errors.
+    // Note that if the robot does not receive a command it will try to extrapolate
+    // the desired behavior assuming a constant acceleration model
+    return limitRate(dq_max, positions.q, state.q_d);
+  };
+
   switch (frame) {
   case vpRobot::JOINT_STATE: {
     std::cout << "DBG: start joint_velocity_callback() ----------" << std::endl;
     robot->control(joint_velocity_callback);
+//    robot->control(joint_velocity_callback_using_position);
     break;
   }
   case vpRobot::END_EFFECTOR_FRAME: {
