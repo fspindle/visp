@@ -15,15 +15,14 @@ sudo: required
 dist: trusty
 
 before_install:
-  - git clone https://github.com/lagadic/ViSP-images ${TRAVIS_BUILD_DIR}/ViSP-images
+  - git clone --depth 1 https://github.com/lagadic/ViSP-images ${TRAVIS_BUILD_DIR}/ViSP-images
 #  - cd ${TRAVIS_BUILD_DIR} && { curl -O http://visp-doc.inria.fr/download/dataset/ViSP-images-3.0.0.zip ; cd -; }
 #  - unzip ${TRAVIS_BUILD_DIR}/ViSP-images-3.0.0.zip -d ${TRAVIS_BUILD_DIR}
   # Get libs for OSX
   - "if [ $TRAVIS_OS_NAME = 'osx' ]; then brew update; fi"
   - "if [ $TRAVIS_OS_NAME = 'osx' ]; then /usr/bin/yes | pip2 uninstall numpy; fi"
-  - "if [ $TRAVIS_OS_NAME = 'osx' ]; then brew tap homebrew/science; fi"
-  - "if [ $TRAVIS_OS_NAME = 'osx' ]; then brew install opencv3; fi"
-  - "if [ $TRAVIS_OS_NAME = 'osx' ]; then export OpenCV_DIR=/usr/local/opt/opencv3; fi"
+  - "if [ $TRAVIS_OS_NAME = 'osx' ]; then brew install opencv; fi"
+  - "if [ $TRAVIS_OS_NAME = 'osx' ]; then export OpenCV_DIR=/usr/local/opt/opencv; fi"
   - "if [ $TRAVIS_OS_NAME = 'osx' ]; then brew install libxml2 libdc1394 gsl; fi"
   
   # Get libs for Linux
@@ -39,9 +38,6 @@ before_install:
   - "if [ $TRAVIS_OS_NAME = 'linux' ]; then sudo apt-get install -qq libavcodec-dev libbz2-dev; fi"
   - "if [ $TRAVIS_OS_NAME = 'linux' ]; then sudo apt-get install -qq libogre-1.9-dev libois-dev; fi"
   - "if [ $TRAVIS_OS_NAME = 'linux' ]; then sudo apt-get install -qq libzbar-dev libdmtx-dev; fi"
-
-  # Work arround to found libomp.so when executing tests
-  - "if [ $CC = 'clang' ]; then export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/usr/local/clang-3.9.0/lib; fi"
 
 before_script:
   - mkdir build

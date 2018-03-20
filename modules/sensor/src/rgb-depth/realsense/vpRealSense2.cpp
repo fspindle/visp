@@ -39,6 +39,7 @@
 #include <iomanip>
 #include <map>
 #include <set>
+#include <cstring>
 #include <visp3/core/vpImageConvert.h>
 #include <visp3/sensor/vpRealSense2.h>
 
@@ -95,7 +96,11 @@ void vpRealSense2::acquire(unsigned char *const data_image, unsigned char *const
 {
   auto data = m_pipe.wait_for_frames();
   if (align_to != NULL)
+#if (RS2_API_VERSION > ((2 * 10000) + (9 * 100) + 0))
+    data = align_to->process(data);
+#else
     data = align_to->proccess(data);
+#endif
 
   if (data_image != NULL) {
     auto color_frame = data.get_color_frame();
@@ -135,7 +140,11 @@ void vpRealSense2::acquire(unsigned char *const data_image, unsigned char *const
 {
   auto data = m_pipe.wait_for_frames();
   if (align_to != NULL)
+#if (RS2_API_VERSION > ((2 * 10000) + (9 * 100) + 0))
+    data = align_to->process(data);
+#else
     data = align_to->proccess(data);
+#endif
 
   if (data_image != NULL) {
     auto color_frame = data.get_color_frame();
@@ -177,7 +186,11 @@ void vpRealSense2::acquire(unsigned char *const data_image, unsigned char *const
 {
   auto data = m_pipe.wait_for_frames();
   if (align_to != NULL)
+#if (RS2_API_VERSION > ((2 * 10000) + (9 * 100) + 0))
+    data = align_to->process(data);
+#else
     data = align_to->proccess(data);
+#endif
 
   auto color_frame = data.get_color_frame();
   if (data_image != NULL) {
@@ -524,7 +537,7 @@ vpHomogeneousMatrix vpRealSense2::getTransformation(const rs2_stream &from, cons
   for (unsigned int i = 0; i < 3; i++) {
     t[i] = extrinsics.translation[i];
     for (unsigned int j = 0; j < 3; j++)
-      R[i][j] = extrinsics.rotation[i * 3 + j];
+      R[i][j] = extrinsics.rotation[j * 3 + i]; //rotation is column-major order
   }
 
   vpHomogeneousMatrix to_M_from(t, R);

@@ -110,7 +110,7 @@ vp_clear_vars(VISPModules_TARGETS)
 #-----------------------------------------------------------------------------
 # VISP version number.  An even minor number corresponds to releases.
 set(VISP_VERSION_MAJOR "3")
-set(VISP_VERSION_MINOR "1")
+set(VISP_VERSION_MINOR "2")
 set(VISP_VERSION_PATCH "0")
 set(VISP_VERSION "${VISP_VERSION_MAJOR}.${VISP_VERSION_MINOR}.${VISP_VERSION_PATCH}")
 # Package revision number
@@ -253,6 +253,72 @@ if(UNIX)
   list(APPEND CMAKE_MODULE_PATH "/usr/share/OGRE/cmake/modules")
 endif(UNIX)
 
+# ----------------------------------------------------------------------------
+# Check for system libs
+# ----------------------------------------------------------------------------
+include(CheckLibraryExists)
+
+if(UNIX)
+  # try to found -lm requested on some platforms to link with X11
+  find_library(M_LIBRARY NAMES m)
+  mark_as_advanced(M_LIBRARY)
+  if(M_LIBRARY)
+    list(APPEND VISP_LINKER_LIBS ${M_LIBRARY})
+  endif()
+  # try to found -lsocket -lnsl requested for vpNetwork and vpSickLDMRS
+  find_library(SOCKET_LIBRARY NAMES socket)
+  find_library(NSL_LIBRARY NAMES nsl)
+  mark_as_advanced(SOCKET_LIBRARY NSL_LIBRARY)
+  if (SOCKET_LIBRARY)
+    list(APPEND VISP_LINKER_LIBS ${SOCKET_LIBRARY})
+  endif()
+  if (NSL_LIBRARY)
+    list(APPEND VISP_LINKER_LIBS ${NSL_LIBRARY})
+  endif()
+endif()
+
+if(WIN32)
+  # winmm.lib for timeGetTime() under windows
+  check_library_exists("winmm.lib" getch "" HAVE_LIBWINMM) # for timeGetTime()
+  if(HAVE_LIBWINMM)
+    list(APPEND VISP_LINKER_LIBS "winmm.lib")
+  endif()
+endif()
+
+# Add library ws2_32.a or ws2_32.lib for vpNetwork class
+if(WIN32 AND NOT CYGWIN)
+  if(MINGW)
+    set(WS2_32_LIBRARY "ws2_32.a")
+    check_library_exists(${WS2_32_LIBRARY} getch "" HAVE_LIBWS2_32) # for inet_ntoa() and socket functionalities
+    if(HAVE_LIBWS2_32)
+      list(APPEND VISP_LINKER_LIBS ${WS2_32_LIBRARY})
+    else()
+      find_library(HAVE_LIBWS2_32 ${WS2_32_LIBRARY}
+        "$ENV{MINGW_DIR}/lib"
+        "$ENV{MINGW_DIR}/mingw/lib"
+        C:/mingw/mingw/lib)
+      if(HAVE_LIBWS2_32)
+        list(APPEND VISP_LINKER_LIBS "${WS2_32_LIBRARY}")
+      endif()
+    endif()
+  elseif(WINRT)
+    # Since check_library_exists() and find_library() does't work to detect ws2_32.lib we add the lib that is part of Windows SDK
+    set(WS2_32_LIBRARY "ws2_32.lib")
+    list(APPEND VISP_LINKER_LIBS  ${WS2_32_LIBRARY})
+  else() # pure WIN32
+    set(WS2_32_LIBRARY "ws2_32.lib")
+    #check_library_exists("ws2_32.lib" getch "" HAVE_LIBWS2_32) # for inet_ntoa() and socket functionalities
+    check_library_exists(${WS2_32_LIBRARY} getch "" HAVE_LIBWS2_32) # for inet_ntoa() and socket functionalities
+    if(HAVE_LIBWS2_32)
+      list(APPEND VISP_LINKER_LIBS ${WS2_32_LIBRARY})
+    endif()
+  endif()
+  mark_as_advanced(HAVE_LIBWS2_32)
+endif()
+
+# Should be before USE_CPP11
+VP_CHECK_FUNCTION_EXISTS(inet_ntop "${VISP_LINKER_LIBS}")
+
 #--------------------------------------------------------------------
 # Option management
 #--------------------------------------------------------------------
@@ -366,7 +432,16 @@ VP_OPTION(USE_CMU1394     CMU1394     ""    "Include cmu1494 support"          "
 VP_OPTION(USE_GDI         GDI         ""    "Include gdi support"              "" ON IF WIN32 AND NOT WINRT)
 #VP_OPTION(USE_DIRECT3D    DIRECT3D    ""    "Include d3d support"             "" ON IF WIN32 AND NOT WINRT)
 VP_OPTION(USE_DIRECTSHOW  DIRECTSHOW  ""    "Include dshow support"            "" ON IF WIN32 AND NOT WINRT)
-VP_OPTION(USE_OPENMP      OpenMP      ""    "Include openmp support"           "" ON)
+
+# Workaround libomp.so missing at run-time when using clang: https://github.com/travis-ci/travis-ci/issues/8613
+string(COMPARE NOTEQUAL "" "$ENV{TRAVIS}" RUNNING_ON_TRAVIS)
+if (${RUNNING_ON_TRAVIS} AND CMAKE_C_COMPILER_ID MATCHES "Clang")
+  set(COMPILER_SUPPORTS_OPENMP FALSE)
+else()
+  set(COMPILER_SUPPORTS_OPENMP TRUE)
+endif()
+
+VP_OPTION(USE_OPENMP      OpenMP      ""    "Include openmp support"           "" ON IF COMPILER_SUPPORTS_OPENMP)
 VP_OPTION(USE_EIGEN3      Eigen3      QUIET "Include eigen3 support"           "" ON IF NOT WINRT)
 # Since the FindLAPACK.cmake provided with CMake is for Fortran language,
 # in CMakeModules we have added FindLAPACK_C.cmake for C language
@@ -542,30 +617,6 @@ if(USE_OGRE)
   vp_set_ogre_media()
 elseif(CMAKE_TOOLCHAIN_FILE)
   vp_set_ogre_advanced_var()
-endif()
-
-# ----------------------------------------------------------------------------
-# Check for system libs
-# ----------------------------------------------------------------------------
-include(CheckLibraryExists)
-
-if(UNIX)
-  # try to found -lm requested on some platforms to link with X11
-  find_library(M_LIBRARY NAMES m)
-  mark_as_advanced(M_LIBRARY)
-  if(M_LIBRARY)
-    list(APPEND VISP_LINKER_LIBS ${M_LIBRARY})
-  endif()
-  # try to found -lsocket -lnsl requested for vpNetwork and vpSickLDMRS
-  find_library(SOCKET_LIBRARY NAMES socket)
-  find_library(NSL_LIBRARY NAMES nsl)
-  mark_as_advanced(SOCKET_LIBRARY NSL_LIBRARY)
-  if (SOCKET_LIBRARY)
-    list(APPEND VISP_LINKER_LIBS ${SOCKET_LIBRARY})
-  endif()
-  if (NSL_LIBRARY)
-    list(APPEND VISP_LINKER_LIBS ${NSL_LIBRARY})
-  endif()
 endif()
 
 #----------------------------------------------------------------------
@@ -799,6 +850,8 @@ VP_SET(VISP_HAVE_FUNC_STD_ERFC TRUE IF HAVE_FUNC_STD_ERFC) # for header vpConfig
 VP_SET(VISP_HAVE_FUNC_STRTOF TRUE IF HAVE_FUNC_STRTOF) # for header vpConfig.h
 # Find log1p function (math.h)
 VP_SET(VISP_HAVE_FUNC_LOG1P TRUE IF HAVE_FUNC_LOG1P) # for header vpConfig.h
+# Find inet_ntop function
+VP_SET(VISP_HAVE_FUNC_INET_NTOP TRUE IF HAVE_FUNC_INET_NTOP) # for header vpConfig.h
 
 VP_SET(VISP_BUILD_DEPRECATED_FUNCTIONS TRUE IF BUILD_DEPRECATED_FUNCTIONS) # for header vpConfig.h
 VP_SET(VISP_MOMENTS_COMBINE_MATRICES TRUE IF ENABLE_MOMENTS_COMBINE_MATRICES) # for header vpConfig.h

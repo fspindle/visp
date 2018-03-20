@@ -352,6 +352,7 @@ void vpMbGenericTracker::computeVVS(std::map<std::string, const vpImage<unsigned
         if (tracker->m_trackerType & DEPTH_NORMAL_TRACKER) {
           for (unsigned int i = 0; i < tracker->m_error_depthNormal.getRows(); i++) {
             double wi = tracker->m_w_depthNormal[i] * factorDepth;
+            W_true[start_index + i] = wi;
             m_weightedError[start_index + i] = wi * m_error[start_index + i];
 
             num += wi * vpMath::sqr(m_error[start_index + i]);
@@ -368,6 +369,7 @@ void vpMbGenericTracker::computeVVS(std::map<std::string, const vpImage<unsigned
         if (tracker->m_trackerType & DEPTH_DENSE_TRACKER) {
           for (unsigned int i = 0; i < tracker->m_error_depthDense.getRows(); i++) {
             double wi = tracker->m_w_depthDense[i] * factorDepthDense;
+            W_true[start_index + i] = wi;
             m_weightedError[start_index + i] = wi * m_error[start_index + i];
 
             num += wi * vpMath::sqr(m_error[start_index + i]);
@@ -3704,10 +3706,46 @@ void vpMbGenericTracker::setTrackerType(const std::map<std::string, int> &mapOfT
 }
 
 /*!
-  Set if the polygons that have the given name have to be considered during
+  Set if the polygon that has the given name has to be considered during
   the tracking phase.
 
-  \param name : name of the polygon(s).
+  \param name : name of the polygon.
+  \param useDepthDenseTracking : True if it has to be considered, False otherwise.
+
+  \note This function will set the new parameter for all the cameras.
+*/
+void vpMbGenericTracker::setUseDepthDenseTracking(const std::string &name, const bool &useDepthDenseTracking)
+{
+  for (std::map<std::string, TrackerWrapper *>::const_iterator it = m_mapOfTrackers.begin();
+       it != m_mapOfTrackers.end(); ++it) {
+    TrackerWrapper *tracker = it->second;
+    tracker->setUseDepthDenseTracking(name, useDepthDenseTracking);
+  }
+}
+
+/*!
+  Set if the polygon that has the given name has to be considered during
+  the tracking phase.
+
+  \param name : name of the polygon.
+  \param useDepthNormalTracking : True if it has to be considered, False otherwise.
+
+  \note This function will set the new parameter for all the cameras.
+*/
+void vpMbGenericTracker::setUseDepthNormalTracking(const std::string &name, const bool &useDepthNormalTracking)
+{
+  for (std::map<std::string, TrackerWrapper *>::const_iterator it = m_mapOfTrackers.begin();
+       it != m_mapOfTrackers.end(); ++it) {
+    TrackerWrapper *tracker = it->second;
+    tracker->setUseDepthNormalTracking(name, useDepthNormalTracking);
+  }
+}
+
+/*!
+  Set if the polygon that has the given name has to be considered during
+  the tracking phase.
+
+  \param name : name of the polygon.
   \param useEdgeTracking : True if it has to be considered, False otherwise.
 
   \note This function will set the new parameter for all the cameras.
@@ -3723,10 +3761,10 @@ void vpMbGenericTracker::setUseEdgeTracking(const std::string &name, const bool 
 
 #if defined(VISP_HAVE_MODULE_KLT) && (defined(VISP_HAVE_OPENCV) && (VISP_HAVE_OPENCV_VERSION >= 0x020100))
 /*!
-  Set if the polygons that have the given name have to be considered during
+  Set if the polygon that has the given name has to be considered during
   the tracking phase.
 
-  \param name : name of the polygon(s).
+  \param name : name of the polygon.
   \param useKltTracking : True if it has to be considered, False otherwise.
 
   \note This function will set the new parameter for all the cameras.
@@ -4555,6 +4593,11 @@ void vpMbGenericTracker::TrackerWrapper::initCircle(const vpPoint &p1, const vpP
 {
   if (m_trackerType & EDGE_TRACKER)
     vpMbEdgeTracker::initCircle(p1, p2, p3, radius, idFace, name);
+
+#if defined(VISP_HAVE_MODULE_KLT) && (defined(VISP_HAVE_OPENCV) && (VISP_HAVE_OPENCV_VERSION >= 0x020100))
+  if (m_trackerType & KLT_TRACKER)
+    vpMbKltTracker::initCircle(p1, p2, p3, radius, idFace, name);
+#endif
 }
 
 void vpMbGenericTracker::TrackerWrapper::initCylinder(const vpPoint &p1, const vpPoint &p2, const double radius,
@@ -5026,11 +5069,11 @@ void vpMbGenericTracker::TrackerWrapper::reInitModel(const vpImage<unsigned char
   m_depthNormalFaces.clear();
 
   // Depth dense
-  for (size_t i = 0; i < m_depthDenseNormalFaces.size(); i++) {
-    delete m_depthDenseNormalFaces[i];
-    m_depthDenseNormalFaces[i] = NULL;
+  for (size_t i = 0; i < m_depthDenseFaces.size(); i++) {
+    delete m_depthDenseFaces[i];
+    m_depthDenseFaces[i] = NULL;
   }
-  m_depthDenseNormalFaces.clear();
+  m_depthDenseFaces.clear();
 
   faces.reset();
 
