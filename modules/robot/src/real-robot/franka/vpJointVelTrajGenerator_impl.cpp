@@ -203,11 +203,11 @@ void vpJointVelTrajGenerator::control_thread(franka::Robot *robot,
     vpColVector diag(test_id.getCols());
     double norm_diag = 0;
     double norm_matrix = 0;
-    for(int i=0; i<diag.size(); i++) {
+    for(size_t i=0; i<diag.size(); i++) {
       norm_diag += test_id[i][i];
     }
-    for(int i=0; i<test_id.getRows(); i++) {
-      for(int j=0; j<test_id.getRows(); j++) {
+    for(size_t i=0; i<test_id.getRows(); i++) {
+      for(size_t j=0; j<test_id.getRows(); j++) {
         norm_matrix += test_id[i][j];
       }
     }
