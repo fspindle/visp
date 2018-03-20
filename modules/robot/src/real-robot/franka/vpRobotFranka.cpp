@@ -53,7 +53,7 @@
 */
 vpRobotFranka::vpRobotFranka()
   : vpRobot(), m_handler(NULL), m_positionningVelocity(20.), m_controlThread(), m_controlThreadIsRunning(false),
-    m_q_min(), m_q_max(), m_dq_max(), m_ddq_max(), m_robot_state(),
+    m_controlThreadStopAsked(false), m_q_min(), m_q_max(), m_dq_max(), m_ddq_max(), m_robot_state(),
     m_mutex(), m_dq_des()
 {
   init();
@@ -67,7 +67,7 @@ vpRobotFranka::vpRobotFranka()
  */
 vpRobotFranka::vpRobotFranka(const std::string &franka_address, franka::RealtimeConfig realtime_config)
   : vpRobot(), m_handler(NULL), m_positionningVelocity(20.), m_controlThread(), m_controlThreadIsRunning(false),
-    m_q_min(), m_q_max(), m_dq_max(), m_ddq_max(), m_robot_state(),
+    m_controlThreadStopAsked(false), m_q_min(), m_q_max(), m_dq_max(), m_ddq_max(), m_robot_state(),
     m_mutex(), m_dq_des(), m_ve_des()
 {
   init();
