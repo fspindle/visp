@@ -54,6 +54,8 @@
 #include <visp3/core/vpTime.h>
 #include <visp3/core/vpMatrix.h>
 
+//#define FORCE_JACOBIAN_6_BY_6
+
 #ifdef VISP_HAVE_FRANKA
 void vpJointVelTrajGenerator::control_thread(franka::Robot *robot,
                                              std::atomic_bool &stop,
@@ -73,16 +75,22 @@ void vpJointVelTrajGenerator::control_thread(franka::Robot *robot,
   double delta_t = 0.001;
   std::array<double, 7> q_prev;
   franka::Model model = robot->loadModel();
+#ifdef FORCE_JACOBIAN_6_BY_6
+  vpMatrix eJe(6, 6);
+#else
   vpMatrix eJe(6, 7);
+#endif
 
   std::ofstream log_time("time.log");
   std::ofstream log_q_mes("q-mes.log");
   std::ofstream log_dq_mes("dq-mes.log");
   std::ofstream log_dq_des("dq-des.log");
+  std::ofstream log_dq_cmd("dq-cmd.log");
   std::ofstream log_v_des("v-des.log");
   std::ofstream log_pseudo_inv("pseudo_inv.log");
+  std::ofstream log_eJe("eJe.log");
 
-  auto joint_velocity_callback = [=, &log_time, &log_q_mes, &log_dq_mes, &log_dq_des, &log_v_des, &log_pseudo_inv, &time, &q_prev, &dq_des, &stop, &robot_state, &mutex]
+  auto joint_velocity_callback = [=, &log_time, &log_q_mes, &log_dq_mes, &log_dq_des, &log_dq_cmd, &log_v_des, &log_pseudo_inv, &log_eJe, &time, &q_prev, &dq_des, &stop, &robot_state, &mutex]
       (const franka::RobotState& state, franka::Duration period) -> franka::JointVelocities {
 
     time += period.toSec();
@@ -110,7 +118,6 @@ void vpJointVelTrajGenerator::control_thread(franka::Robot *robot,
       for (auto & dq_ : dq_des_) {
         dq_ = 0.0;
       }
-      std::cout << "DBG: stop asked setting dq_des_: " << dq_des_[0] << " " << dq_des_[1] << " " << dq_des_[2] << " " << dq_des_[3] << " " << dq_des_[4] << " " << dq_des_[5] << " " << dq_des_[6] << std::endl;
     }
 
     joint_vel_traj_generator.applyVel(dq_des_, q_cmd, dq_cmd);
@@ -122,7 +129,6 @@ void vpJointVelTrajGenerator::control_thread(franka::Robot *robot,
     log_dq_des << std::fixed << std::setprecision(8) << dq_cmd[0] << " " << dq_cmd[1] << " " << dq_cmd[2] << " " << dq_cmd[3] << " " << dq_cmd[4] << " " << dq_cmd[5] << " " << dq_cmd[6] << std::endl;
 
     franka::JointVelocities velocities = {dq_cmd[0], dq_cmd[1], dq_cmd[2], dq_cmd[3], dq_cmd[4], dq_cmd[5], dq_cmd[6]};
-//    franka::JointVelocities velocities = {0, 0, 0, 0, 0, 0, 0};
 
     static bool display_dbg = true;
     if (stop) {
@@ -140,15 +146,15 @@ void vpJointVelTrajGenerator::control_thread(franka::Robot *robot,
       }
       cpt_dbg ++;
 
-      std::cout << "DBG: stop iter " << cpt_dbg << " dq_cmd[6]: " << dq_cmd[6] << " state.q_d[6]: " << state.q_d[6] << " q_prev[6]: " << q_prev[6] << std::endl;
       if (stop == 7) {
-        std::cout << std::endl << "DBG: control_thread() all joints are stopped after " << cpt_dbg << " iter, shutting down example" << std::endl;
         log_time.close();
         log_q_mes.close();
         log_dq_mes.close();
         log_dq_des.close();
+        log_dq_cmd.close();
         log_v_des.close();
         log_pseudo_inv.close();
+        log_eJe.close();
         return franka::MotionFinished(velocities);
       }
     }
@@ -169,7 +175,7 @@ void vpJointVelTrajGenerator::control_thread(franka::Robot *robot,
     return limitRate(ddq_max, velocities.dq, state.dq_d);
   };
 
-  auto cartesian_velocity_callback = [=, &log_time, &log_q_mes, &log_dq_mes, &log_dq_des, &log_v_des, &log_pseudo_inv, &time, &model, &q_prev, &ve_des, &stop, &robot_state, &mutex]
+  auto cartesian_velocity_callback = [=, &log_time, &log_q_mes, &log_dq_mes, &log_dq_des,  &log_dq_cmd, &log_v_des, &log_pseudo_inv, &log_eJe, &time, &model, &q_prev, &ve_des, &stop, &robot_state, &mutex]
       (const franka::RobotState& state, franka::Duration period) -> franka::JointVelocities {
 
     time += period.toSec();
@@ -187,6 +193,20 @@ void vpJointVelTrajGenerator::control_thread(franka::Robot *robot,
       robot_state = state;
     }
 
+#ifdef FORCE_JACOBIAN_6_BY_6
+    // Get robot Jacobian
+    std::array<double, 42> jacobian = model.bodyJacobian(franka::Frame::kEndEffector, state);
+    // Convert row-major to col-major
+    for (size_t i = 0; i < 6; i ++) { // TODO make a function
+      for (size_t j = 0; j < 7; j ++) {
+        if (j < 2)
+          eJe[i][j] = jacobian[j*6 + i];
+        else if (j > 2)
+          eJe[i][j-1] = jacobian[j*6 + i];
+      }
+    }
+
+#else
     // Get robot Jacobian
     std::array<double, 42> jacobian = model.bodyJacobian(franka::Frame::kEndEffector, state);
     // Convert row-major to col-major
@@ -195,6 +215,7 @@ void vpJointVelTrajGenerator::control_thread(franka::Robot *robot,
         eJe[i][j] = jacobian[j*6 + i];
       }
     }
+#endif
 
     // Compute joint velocity
     vpMatrix eJe_inv = eJe.pseudoInverse();
@@ -213,9 +234,23 @@ void vpJointVelTrajGenerator::control_thread(franka::Robot *robot,
     }
 
     vpColVector q_dot = eJe_inv * ve_des; // TODO introduce try catch
+
+#ifndef FORCE_JACOBIAN_6_BY_6
+    // Test to check if J * Jinv * v_input = v_input
+    vpColVector ve_test = eJe * eJe_inv * ve_des; // TODO: remove
+#endif
+
     std::array<double, 7> dq_des;
+#ifdef FORCE_JACOBIAN_6_BY_6
+    for (size_t i = 0; i < 2; i++)
+      dq_des[i] = q_dot[i];
+    dq_des[2] = 0;
+    for (size_t i = 2; i < 6; i++)
+      dq_des[i+1] = q_dot[i];
+#else
     for (size_t i = 0; i < 7; i++) // TODO create a function to convert
       dq_des[i] = q_dot[i];
+#endif
 
     std::array<double, 7> q_cmd;
     std::array<double, 7> dq_cmd;
@@ -231,13 +266,15 @@ void vpJointVelTrajGenerator::control_thread(franka::Robot *robot,
 
     log_q_mes << std::fixed << std::setprecision(8) << state.q_d[0] << " " << state.q_d[1] << " " << state.q_d[2] << " " << state.q_d[3] << " " << state.q_d[4] << " " << state.q_d[5] << " " << state.q_d[6] << std::endl;
     log_dq_mes << std::fixed << std::setprecision(8) << state.dq_d[0] << " " << state.dq_d[1] << " " << state.dq_d[2] << " " << state.dq_d[3] << " " << state.dq_d[4] << " " << state.dq_d[5] << " " << state.dq_d[6] << std::endl;
-    log_dq_des << std::fixed << std::setprecision(8) << dq_cmd[0] << " " << dq_cmd[1] << " " << dq_cmd[2] << " " << dq_cmd[3] << " " << dq_cmd[4] << " " << dq_cmd[5] << " " << dq_cmd[6] << std::endl;
+    log_dq_cmd << std::fixed << std::setprecision(8) << dq_cmd[0] << " " << dq_cmd[1] << " " << dq_cmd[2] << " " << dq_cmd[3] << " " << dq_cmd[4] << " " << dq_cmd[5] << " " << dq_cmd[6] << std::endl;
+    log_dq_des << std::fixed << std::setprecision(8) << dq_des_[0] << " " << dq_des_[1] << " " << dq_des_[2] << " " << dq_des_[3] << " " << dq_des_[4] << " " << dq_des_[5] << " " << dq_des_[6] << std::endl;
     log_v_des << std::fixed << std::setprecision(8) << ve_des[0] << " " << ve_des[1] << " " << ve_des[2] << " " << ve_des[3] << " " << ve_des[4] << " " << ve_des[5] << std::endl;
     log_pseudo_inv << std::fixed << std::setprecision(8) << norm_diag << " " << norm_matrix << " " << q_dot[0] << " " << q_dot[1] << " " << q_dot[2] << " " << q_dot[3] << " " << q_dot[4] << " " << q_dot[5] << " " << q_dot[6] << std::endl;
+    log_eJe << "--------------\n" << eJe_inv << std::endl;
 
-//    std::cout << "DBG apply joint vel: " << dq_cmd[0] << " " << dq_cmd[1] << " " <<  dq_cmd[2] << " " <<  dq_cmd[3] << " " <<  dq_cmd[4] << " " <<  dq_cmd[5]<< " " <<  dq_cmd[6] << std::endl;
+    std::cout << "DBG apply joint vel: " << dq_cmd[0] << " " << dq_cmd[1] << " " <<  dq_cmd[2] << " " <<  dq_cmd[3] << " " <<  dq_cmd[4] << " " <<  dq_cmd[5]<< " " <<  dq_cmd[6] << std::endl;
 
-//    franka::JointVelocities velocities = {0, 0, 0, 0, 0, 0, 0};
+//    franka::JointVelocities velocities = {0,0,0,0,0,0,0};
     franka::JointVelocities velocities = {dq_cmd[0], dq_cmd[1], dq_cmd[2], dq_cmd[3], dq_cmd[4], dq_cmd[5], dq_cmd[6]};
 
     static bool display_dbg = true;
@@ -256,13 +293,14 @@ void vpJointVelTrajGenerator::control_thread(franka::Robot *robot,
       }
       cpt_dbg ++;
       if (stop == 7) {
-        //        std::cout << std::endl << "DBG: control_thread() all joints are stopped after " << cpt_dbg << " iter, shutting down example" << std::endl;
         log_time.close();
         log_q_mes.close();
         log_dq_mes.close();
         log_dq_des.close();
+        log_dq_cmd.close();
         log_v_des.close();
         log_pseudo_inv.close();
+        log_eJe.close();
         return franka::MotionFinished(velocities);
       }
     }

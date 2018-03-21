@@ -85,15 +85,6 @@ void vpRobotFranka::init()
   m_q_max   = std::array<double, 7> {12.8973, 1.7628, 2.8973, 0.0175, 2.8973, 3.7525, 2.8973};
   m_dq_max  = std::array<double, 7> {2.1750, 2.1750, 2.1750, 2.1750, 2.6100, 2.6100, 2.6100};
   m_ddq_max = std::array<double, 7> {14.25, 7.125, 11.875, 11.875, 14.25, 19.0, 19.0};
-
-  {
-    // TODO reduce security joint position offset
-    double offset = vpMath::rad(10);//
-    for (auto q : m_q_min)
-      q += offset;
-    for (auto q : m_q_max)
-      q -= offset;
-  }
 }
 
 /*!
@@ -103,12 +94,8 @@ void vpRobotFranka::init()
 */
 vpRobotFranka::~vpRobotFranka()
 {
-  std::cout << "DBG: call destructor -----------------------" << std::endl;
   setRobotState(vpRobot::STATE_STOP);
 
-  //  if (m_controlThread.joinable()) {
-  //    m_controlThread.join();
-  //  }
   if (m_handler)
     delete m_handler;
 }
