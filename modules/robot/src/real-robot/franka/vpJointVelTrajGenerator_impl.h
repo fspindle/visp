@@ -126,8 +126,8 @@ private:
 
   bool m_flagJointLimit;
 
-  const double m_offset_joint_limit = 0.01; // stop before joint limit
-  const double m_delta_q_min =	0.0001;	// Delta Q minimum (rad)
+  const double m_offset_joint_limit = 0.01; // stop before joint limit (rad)
+  const double m_delta_q_min =	1e-9;	      // Delta q minimum (rad)
 };
 
 #endif
