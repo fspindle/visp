@@ -294,7 +294,6 @@ static void quick_decode_codeword(apriltag_family_t *tf, uint64_t rcode,
                                   struct quick_decode_entry *entry)
 {
     struct quick_decode *qd = (struct quick_decode*) tf->impl;
-    entry->hamming = 0;
 
     for (int ridx = 0; ridx < 4; ridx++) {
 
@@ -571,6 +570,8 @@ double quad_goodness(apriltag_family_t *family, image_u8_t *im, struct quad *qua
 // returns the decision margin. Return < 0 if the detection should be rejected.
 float quad_decode(apriltag_family_t *family, image_u8_t *im, struct quad *quad, struct quick_decode_entry *entry, image_u8_t *im_samples)
 {
+    entry->hamming = 0;
+
     // decode the tag binary contents by sampling the pixel
     // closest to the center of each bit cell.
 
