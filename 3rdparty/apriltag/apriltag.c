@@ -294,6 +294,7 @@ static void quick_decode_codeword(apriltag_family_t *tf, uint64_t rcode,
                                   struct quick_decode_entry *entry)
 {
     struct quick_decode *qd = (struct quick_decode*) tf->impl;
+    entry->hamming = 0;
 
     for (int ridx = 0; ridx < 4; ridx++) {
 
