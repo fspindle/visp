@@ -63,7 +63,7 @@
 
   \ingroup group_robot_real_arm
 
-  \brief Control of Franka robot.
+  This class is a wrapper over the libfranka component part of the [Franka Control Interface] (FCI).
 
 */
 class VISP_EXPORT vpRobotFranka : public vpRobot
@@ -126,6 +126,9 @@ public:
 
     return m_handler;
   }
+
+  vpColVector getJointMin() const;
+  vpColVector getJointMax() const;
 
   void getPosition(const vpRobot::vpControlFrameType frame, vpColVector &joint);
   void getPosition(const vpRobot::vpControlFrameType frame, vpPoseVector &pose);

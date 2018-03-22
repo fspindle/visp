@@ -457,6 +457,32 @@ franka::RobotState vpRobotFranka::getRobotInternalState()
   return robot_state;
 }
 
+/*!
+  Get minimal joint values.
+  \return A 7-dimension vector that contains the minimal joint values for the 7 dof. All the values are expressed in radians.
+ */
+vpColVector vpRobotFranka::getJointMin() const
+{
+  vpColVector q_min(m_q_min.size());
+  for (size_t i = 0; i < m_q_min.size(); i ++)
+    q_min[i] = m_q_min[i];
+
+  return q_min;
+}
+/*!
+  Get maximum joint values.
+  \return A 7-dimension vector that contains the maximum joint values for the 7 dof. All the values are expressed in radians.
+ */
+vpColVector vpRobotFranka::getJointMax() const
+{
+  vpColVector q_max(m_q_max.size());
+  for (size_t i = 0; i < m_q_max.size(); i ++)
+    q_max[i] = m_q_max[i];
+
+  return q_max;
+}
+
+
 #elif !defined(VISP_BUILD_SHARED_LIBS)
 // Work arround to avoid warning: libvisp_robot.a(vpRobotFranka.cpp.o) has
 // no symbols
