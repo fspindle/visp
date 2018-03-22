@@ -69,7 +69,7 @@ void vpJointVelTrajGenerator::control_thread(franka::Robot *robot,
                                              franka::RobotState &robot_state,
                                              std::mutex &mutex)
 {
-  std::cout << "DBG: control_thread() in ++++++++++: " << m_njoints <<  std::endl;
+//  std::cout << "DBG: control_thread() in ++++++++++: " << m_njoints <<  std::endl;
 
   double time = 0.0;
   double delta_t = 0.001;
@@ -96,7 +96,7 @@ void vpJointVelTrajGenerator::control_thread(franka::Robot *robot,
     time += period.toSec();
     log_time << time << std::endl;
 
-    std::cout << "DBG: time " << time << std::endl;
+//    std::cout << "DBG: time " << time << std::endl;
 
     static vpJointVelTrajGenerator joint_vel_traj_generator;
 
@@ -122,7 +122,7 @@ void vpJointVelTrajGenerator::control_thread(franka::Robot *robot,
 
     joint_vel_traj_generator.applyVel(dq_des_, q_cmd, dq_cmd);
 
-    std::cout << "DBG apply joint vel: " << dq_cmd[0] << " " << dq_cmd[1] << " " <<  dq_cmd[2] << " " <<  dq_cmd[3] << " " <<  dq_cmd[4] << " " <<  dq_cmd[5]<< " " <<  dq_cmd[6] << std::endl;
+//    std::cout << "DBG apply joint vel: " << dq_cmd[0] << " " << dq_cmd[1] << " " <<  dq_cmd[2] << " " <<  dq_cmd[3] << " " <<  dq_cmd[4] << " " <<  dq_cmd[5]<< " " <<  dq_cmd[6] << std::endl;
 
     log_q_mes << std::fixed << std::setprecision(8) << state.q_d[0] << " " << state.q_d[1] << " " << state.q_d[2] << " " << state.q_d[3] << " " << state.q_d[4] << " " << state.q_d[5] << " " << state.q_d[6] << std::endl;
     log_dq_mes << std::fixed << std::setprecision(8) << state.dq_d[0] << " " << state.dq_d[1] << " " << state.dq_d[2] << " " << state.dq_d[3] << " " << state.dq_d[4] << " " << state.dq_d[5] << " " << state.dq_d[6] << std::endl;
@@ -133,7 +133,7 @@ void vpJointVelTrajGenerator::control_thread(franka::Robot *robot,
     static bool display_dbg = true;
     if (stop) {
       if (display_dbg) {
-        std::cout << std::endl << "DBG: control_thread() asked to finish waiting for joint stop" << std::endl;
+//        std::cout << std::endl << "DBG: control_thread() asked to finish waiting for joint stop" << std::endl;
         display_dbg = false;
       }
       unsigned int stop = 0;
@@ -272,7 +272,7 @@ void vpJointVelTrajGenerator::control_thread(franka::Robot *robot,
     log_pseudo_inv << std::fixed << std::setprecision(8) << norm_diag << " " << norm_matrix << " " << q_dot[0] << " " << q_dot[1] << " " << q_dot[2] << " " << q_dot[3] << " " << q_dot[4] << " " << q_dot[5] << " " << q_dot[6] << std::endl;
     log_eJe << "--------------\n" << eJe_inv << std::endl;
 
-    std::cout << "DBG apply joint vel: " << dq_cmd[0] << " " << dq_cmd[1] << " " <<  dq_cmd[2] << " " <<  dq_cmd[3] << " " <<  dq_cmd[4] << " " <<  dq_cmd[5]<< " " <<  dq_cmd[6] << std::endl;
+//    std::cout << "DBG apply joint vel: " << dq_cmd[0] << " " << dq_cmd[1] << " " <<  dq_cmd[2] << " " <<  dq_cmd[3] << " " <<  dq_cmd[4] << " " <<  dq_cmd[5]<< " " <<  dq_cmd[6] << std::endl;
 
 //    franka::JointVelocities velocities = {0,0,0,0,0,0,0};
     franka::JointVelocities velocities = {dq_cmd[0], dq_cmd[1], dq_cmd[2], dq_cmd[3], dq_cmd[4], dq_cmd[5], dq_cmd[6]};
@@ -280,7 +280,7 @@ void vpJointVelTrajGenerator::control_thread(franka::Robot *robot,
     static bool display_dbg = true;
     if (stop) {
       if (display_dbg) {
-        std::cout << std::endl << "DBG: control_thread() asked to finish waiting for joint stop" << std::endl;
+//        std::cout << std::endl << "DBG: control_thread() asked to finish waiting for joint stop" << std::endl;
         display_dbg = false;
       }
       unsigned int stop = 0;
@@ -323,12 +323,12 @@ void vpJointVelTrajGenerator::control_thread(franka::Robot *robot,
 
   switch (frame) {
   case vpRobot::JOINT_STATE: {
-    std::cout << "DBG: start joint_velocity_callback() ----------" << std::endl;
+//    std::cout << "DBG: start joint_velocity_callback() ----------" << std::endl;
     robot->control(joint_velocity_callback);
     break;
   }
   case vpRobot::END_EFFECTOR_FRAME: {
-    std::cout << "DBG: start cartesian_velocity_callback() ----------" << std::endl;
+//    std::cout << "DBG: start cartesian_velocity_callback() ----------" << std::endl;
     robot->control(cartesian_velocity_callback);
     break;
   }

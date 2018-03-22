@@ -331,12 +331,12 @@ vpRobot::vpRobotStateType vpRobotFranka::setRobotState(vpRobot::vpRobotStateType
     // Start primitive STOP only if the current state is Velocity
     if (vpRobot::STATE_VELOCITY_CONTROL == getRobotState()) {
       // Stop the robot
-      std::cout << "DBG: ask to stop the thread setting m_controlThreadStopAsked = false" << std::endl;
+//      std::cout << "DBG: ask to stop the thread setting m_controlThreadStopAsked = false" << std::endl;
       m_controlThreadStopAsked = true;
       if(m_controlThread.joinable()) {
-        std::cout << "DBG: Stop joint vel thread to stop the robot" << std::endl;
+//        std::cout << "DBG: Stop joint vel thread to stop the robot" << std::endl;
         m_controlThread.join();
-        std::cout << "DBG: control thread joined" << std::endl;
+//        std::cout << "DBG: control thread joined" << std::endl;
       }
     }
     break;
@@ -345,12 +345,12 @@ vpRobot::vpRobotStateType vpRobotFranka::setRobotState(vpRobot::vpRobotStateType
     if (vpRobot::STATE_VELOCITY_CONTROL == getRobotState()) {
       std::cout << "Change the control mode from velocity to position control.\n";
       // Stop the robot
-      std::cout << "DBG: ask to stop the thread setting m_controlThreadStopAsked = false" << std::endl;
+//      std::cout << "DBG: ask to stop the thread setting m_controlThreadStopAsked = false" << std::endl;
       m_controlThreadStopAsked = true;
       if(m_controlThread.joinable()) {
-        std::cout << "DBG: Stop joint vel thread to swith to position control" << std::endl;
+//        std::cout << "DBG: Stop joint vel thread to swith to position control" << std::endl;
         m_controlThread.join();
-        std::cout << "DBG: control thread joined" << std::endl;
+//        std::cout << "DBG: control thread joined" << std::endl;
       }
     }
     break;
@@ -359,7 +359,7 @@ vpRobot::vpRobotStateType vpRobotFranka::setRobotState(vpRobot::vpRobotStateType
     if (vpRobot::STATE_VELOCITY_CONTROL != getRobotState()) {
       std::cout << "Change the control mode from stop to velocity control.\n";
     }
-    std::cout << "DBG: Start joint vel thread" << std::endl;
+//    std::cout << "DBG: Start joint vel thread" << std::endl;
 
     break;
   }
@@ -426,7 +426,7 @@ void vpRobotFranka::setVelocity(const vpRobot::vpControlFrameType frame, const v
 
   if(! m_controlThreadIsRunning) {
     m_controlThreadIsRunning = true;
-    std::cout << "DBG: Start control thread... ++++++++++++++++++++" << std::endl;
+//    std::cout << "DBG: Start control thread... ++++++++++++++++++++" << std::endl;
     m_controlThread = std::thread(&vpJointVelTrajGenerator::control_thread, vpJointVelTrajGenerator(),
                                   std::ref(m_handler), std::ref(m_controlThreadStopAsked),
                                   frame, std::ref(m_ve_des), std::ref(m_dq_des),
@@ -443,7 +443,7 @@ franka::RobotState vpRobotFranka::getRobotInternalState()
   franka::RobotState robot_state;
 
   if (! m_controlThreadIsRunning) {
-    std::cout << "DBG: get robot state using readOnce()" << std::endl;
+//    std::cout << "DBG: get robot state using readOnce()" << std::endl;
     robot_state = m_handler->readOnce();
 
     std::lock_guard<std::mutex> lock(m_mutex);
