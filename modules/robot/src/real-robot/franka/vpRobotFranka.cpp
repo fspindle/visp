@@ -54,7 +54,7 @@
 vpRobotFranka::vpRobotFranka()
   : vpRobot(), m_handler(NULL), m_positionningVelocity(20.), m_controlThread(), m_controlThreadIsRunning(false),
     m_controlThreadStopAsked(false), m_q_min(), m_q_max(), m_dq_max(), m_ddq_max(), m_robot_state(),
-    m_mutex(), m_dq_des()
+    m_mutex(), m_dq_des(), m_eMc()
 {
   init();
 }
@@ -68,7 +68,7 @@ vpRobotFranka::vpRobotFranka()
 vpRobotFranka::vpRobotFranka(const std::string &franka_address, franka::RealtimeConfig realtime_config)
   : vpRobot(), m_handler(NULL), m_positionningVelocity(20.), m_controlThread(), m_controlThreadIsRunning(false),
     m_controlThreadStopAsked(false), m_q_min(), m_q_max(), m_dq_max(), m_ddq_max(), m_robot_state(),
-    m_mutex(), m_dq_des(), m_ve_des()
+    m_mutex(), m_dq_des(), m_ve_des(), m_eMc()
 {
   init();
   connect(franka_address, realtime_config);
@@ -142,26 +142,51 @@ void vpRobotFranka::connect(const std::string &franka_address, franka::RealtimeC
 }
 
 /*!
- * Get robot joint position.
- * \param[in] frame Type of position to retrieve. Value could be only vpRobot::JOINT_SPACE.
- * \param[out] joint Robot joint position. This vector is 7-dim.
+ * Get robot position.
+ * \param[in] frame : Type of position to retrieve. Admissible values are:
+ * - vpRobot::JOINT_STATE to get the 7 joint positions.
+ * - vpRobot::END_EFFECTOR_FRAME to retrieve the cartesian position of the end-effector frame wrt the robot base frame.
+ * - vpRobot::CAMERA_FRAME to retrieve the cartesian position of the camera frame (or more generally a tool frame)
+ *   wrt the robot base frame.
+ * \param[out] position : Robot position. When joint position is asked this vector is 7-dim. Otherwise for a cartesian
+ * position this vector is 6-dim. Its content is similar to a vpPoseVector, with first the 3 tranlations in meter
+ * and then the 3 orientations in radian as a \f$\theta {\bf u}\f$ vector (see vpThetaUVector).
  *
  * If you want to get a cartesian position, use rather
  * getPosition(const vpRobot::vpControlFrameType, vpPoseVector &)
  */
-void vpRobotFranka::getPosition(const vpRobot::vpControlFrameType frame, vpColVector &joint)
+void vpRobotFranka::getPosition(const vpRobot::vpControlFrameType frame, vpColVector &position)
 {
   if (!m_handler) {
     throw(vpException(vpException::fatalError, "Cannot get Franka robot position: robot is not connected"));
   }
 
   franka::RobotState robot_state = getRobotInternalState();
+  vpColVector q(nDof);
+  for (int i=0; i < nDof; i++)
+    q[i] = robot_state.q_d[i];
 
   switch(frame) {
   case JOINT_STATE: {
-    joint.resize(nDof);
-    for (int i=0; i < nDof; i++)
-      joint[i] = robot_state.q_d[i];
+    position = q;
+    break;
+  }
+  case END_EFFECTOR_FRAME: {
+    position.resize(6);
+    vpHomogeneousMatrix fMe = get_fMe(q);
+    vpPoseVector fPe(fMe);
+    for (size_t i=0; i < 6; i++) {
+      position[i] = fPe[i];
+    }
+    break;
+  }
+  case CAMERA_FRAME: {
+    position.resize(6);
+    vpHomogeneousMatrix fMc = get_fMc(q);
+    vpPoseVector fPc(fMc);
+    for (size_t i=0; i < 6; i++) {
+      position[i] = fPc[i];
+    }
     break;
   }
   default: {
@@ -206,13 +231,29 @@ vpHomogeneousMatrix vpRobotFranka::get_fMe(const vpColVector &q)
   return fMe;
 }
 
+/*!
+ * Given the joint position of the robot, computes the forward kinematics (direct geometric model) as an
+ * homogeneous matrix \f${^f}{\bf M}_c\f$ that gives the position of the camera frame (or in general of
+ * any tool attached to the robot) in the robot base frame.
+ *
+ * \param[in] q : Joint position as a 7-dim vector.
+ * \return Position of the camera frame (or tool frame) in the robot base frame.
+ */
+vpHomogeneousMatrix vpRobotFranka::get_fMc(const vpColVector &q)
+{
+  vpHomogeneousMatrix fMe = get_fMe(q);
+  return (fMe * m_eMc);
+}
 
 /*!
  * Get robot cartesian position.
- * \param[in] frame Type of cartesian position to retrieve.
- * \param[out] pose Robot cartesian position.
- * - If \e frame = vpRobot::END_EFFECTOR_FRAME : return the fMe position as a pose vector
- *   (translation + \f$\theta_u\f$)
+ * \param[in] frame : Type of cartesian position to retrieve. Admissible values are:
+ * - vpRobot::END_EFFECTOR_FRAME to retrieve the cartesian position of the end-effector frame wrt the robot base frame.
+ * - vpRobot::CAMERA_FRAME to retrieve the cartesian position of the camera frame (or more generally a tool frame)
+ *   wrt the robot base frame.
+ * \param[out] pose : Robot cartesian position. This vector is 6-dim. Its content is similar to a
+ * vpPoseVector, with first the 3 tranlations in meter and then the 3 orientations in radian as a
+ *  \f$\theta {\bf u}\f$ vector (see vpThetaUVector).
  */
 void vpRobotFranka::getPosition(const vpRobot::vpControlFrameType frame, vpPoseVector &pose)
 {
@@ -222,16 +263,21 @@ void vpRobotFranka::getPosition(const vpRobot::vpControlFrameType frame, vpPoseV
 
   franka::RobotState robot_state = getRobotInternalState();
 
+  std::array<double, 16> pose_array = robot_state.O_T_EE;
+  vpHomogeneousMatrix fMe;
+  for (unsigned int i=0; i< 4; i++) {
+    for (unsigned int j=0; j< 4; j++) {
+      fMe[i][j] = pose_array[j*4 + i];
+    }
+  }
+
   switch(frame) {
   case END_EFFECTOR_FRAME: {
-    std::array<double, 16> pose_array = robot_state.O_T_EE;
-    vpHomogeneousMatrix fMe;
-    for (unsigned int i=0; i< 4; i++) {
-      for (unsigned int j=0; j< 4; j++) {
-        fMe[i][j] = pose_array[j*4 + i];
-      }
-    }
     pose.buildFrom(fMe);
+    break;
+  }
+  case CAMERA_FRAME: {
+    pose.buildFrom(fMe * m_eMc);
     break;
   }
   default: {
@@ -241,6 +287,10 @@ void vpRobotFranka::getPosition(const vpRobot::vpControlFrameType frame, vpPoseV
   }
 }
 
+/*!
+ * Gets the Jacobian represented as a 6x7 matrix in row-major format and computed from the robot current joint position.
+ * \param[out] eJe : Body Jacobian expressed in the end-effector frame.
+ */
 void vpRobotFranka::get_eJe(vpMatrix &eJe)
 {
   if (!m_handler) {
@@ -262,6 +312,11 @@ void vpRobotFranka::get_eJe(vpMatrix &eJe)
 
 }
 
+/*!
+ * Gets the Jacobian relative to the base frame represented as a 6x7 matrix in row-major format and computed
+ * from the robot current joint position.
+ * \param[out] fJe : Zero Jacobian expressed in the base frame.
+ */
 void vpRobotFranka::get_fJe(vpMatrix &fJe)
 {
   if (!m_handler) {
@@ -283,6 +338,11 @@ void vpRobotFranka::get_fJe(vpMatrix &fJe)
 }
 
 
+/*!
+ * Set robot position. This function is blocking; it returns when the desired position is reached.
+ * \param[in] frame : The only possible value is vpRobot::JOINT_STATE. Other values are not implemented.
+ * \param[in] position : This is a 7-dim vector that corresponds to the robot joint positions expressed in rad.
+ */
 void vpRobotFranka::setPosition(const vpRobot::vpControlFrameType frame, const vpColVector &position)
 {
   if (!m_handler) {
@@ -294,15 +354,21 @@ void vpRobotFranka::setPosition(const vpRobot::vpControlFrameType frame, const v
     setRobotState(vpRobot::STATE_POSITION_CONTROL);
   }
 
-  double speed_factor = m_positionningVelocity / 100.;
+  if (frame == vpRobot::JOINT_STATE) {
+    double speed_factor = m_positionningVelocity / 100.;
 
-  std::array<double, 7> q_goal;
-  for (size_t i = 0; i < 7; i++) {
-    q_goal[i] = position[i];
+    std::array<double, 7> q_goal;
+    for (size_t i = 0; i < 7; i++) {
+      q_goal[i] = position[i];
+    }
+
+    vpJointPosTrajGenerator joint_pos_traj_generator(speed_factor, q_goal);
+    m_handler->control(joint_pos_traj_generator);
   }
-
-  vpJointPosTrajGenerator joint_pos_traj_generator(speed_factor, q_goal);
-  m_handler->control(joint_pos_traj_generator);
+  else {
+    throw (vpException(vpRobotException::functionNotImplementedError,
+        "Cannot move the robot to a cartesian position. Only joint positionning is implemented"));
+  }
 }
 
 /*!
@@ -370,6 +436,56 @@ vpRobot::vpRobotStateType vpRobotFranka::setRobotState(vpRobot::vpRobotStateType
   return vpRobot::setRobotState(newState);
 }
 
+/*!
+  Apply a velocity to the robot.
+
+  \param frame : Control frame in which the velocity is expressed. Velocities
+  could be expressed as joint velocities, cartesian velocity twist expressed in
+  the robot reference frame, in the end-effector frame or in the camera or tool
+  frame.
+
+  \param vel : Velocity vector. Translation velocities are expressed
+  in m/s while rotation velocities in rad/s. The size of this vector
+  is always 6 for a cartsian velocity skew, and 7 for joint velocities.
+
+  - When joint velocities have to be applied, frame should be set to vpRobot::JOINT_STATE,
+    and \f$ vel = [\dot{q}_1, \dot{q}_2, \dot{q}_3, \dot{q}_4,
+    \dot{q}_5, \dot{q}_6]^t, \dot{q}_7]^T \f$ correspond to joint velocities in rad/s.
+
+  - When cartesian velocities have to be applied in the reference frame (or in a frame
+    also called fixed frame in ViSP), frame should be set to vpRobot::REFERENCE_FRAME,
+    \f$ vel = [^{f} v_x, ^{f} v_y, ^{f} v_z, ^{f}
+    \omega_x, ^{f} \omega_y, ^{f} \omega_z]^T \f$ is a velocity twist vector
+    expressed in the reference frame, with translations velocities \f$ ^{f} v_x,
+    ^{f} v_y, ^{f} v_z \f$ in m/s and rotation velocities \f$ ^{f}\omega_x, ^{f}
+    \omega_y, ^{f} \omega_z \f$ in rad/s.
+
+  - When cartesian velocities have to be applied in the end-effector frame,
+    frame should be set to vpRobot::END_EFFECTOR_FRAME,
+    \f$ vel = [^{e} v_x, ^{e} v_y, ^{e} v_z, ^{e} \omega_x, ^{e} \omega_y,
+    ^{e} \omega_z]^T \f$ is a velocity twist vector
+    expressed in the end-effector frame, with translations velocities \f$ ^{e} v_x,
+    ^{e} v_y, ^{e} v_z \f$ in m/s and rotation velocities \f$ ^{e}\omega_x, ^{e}
+    \omega_y, ^{e} \omega_z \f$ in rad/s.
+
+  - When cartesian velocities have to be applied in the camera frame or more
+    generally in a tool frame, frame should be set to vpRobot::CAMERA_FRAME,
+    \f$ vel = [^{c} v_x, ^{c} v_y, ^{c} v_z, ^{c} \omega_x, ^{c} \omega_y,
+    ^{c} \omega_z]^T \f$ is a velocity twist vector
+    expressed in the camera or tool frame, with translations velocities \f$ ^{c} v_x,
+    ^{c} v_y, ^{c} v_z \f$ in m/s and rotation velocities \f$ ^{c}\omega_x, ^{c}
+    \omega_y, ^{c} \omega_z \f$ in rad/s.
+
+  \exception vpRobotException::wrongStateError : If a the robot is not
+  configured to handle a velocity. The robot can handle a velocity only if the
+  velocity control mode is set. For that, call setRobotState(
+  vpRobot::STATE_VELOCITY_CONTROL) before setVelocity().
+
+  \warning Velocities could be saturated if one of them exceed the
+  maximal autorized speed (see vpRobot::maxTranslationVelocity and
+  vpRobot::maxRotationVelocity). To change these values use
+  setMaxTranslationVelocity() and setMaxRotationVelocity().
+*/
 void vpRobotFranka::setVelocity(const vpRobot::vpControlFrameType frame, const vpColVector &vel)
 {
   if (vpRobot::STATE_VELOCITY_CONTROL != getRobotState()) {
@@ -458,8 +574,9 @@ franka::RobotState vpRobotFranka::getRobotInternalState()
 }
 
 /*!
-  Get minimal joint values.
-  \return A 7-dimension vector that contains the minimal joint values for the 7 dof. All the values are expressed in radians.
+  Gets minimal joint values.
+  \return A 7-dimension vector that contains the minimal joint values for the 7 dof.
+  All the values are expressed in radians.
  */
 vpColVector vpRobotFranka::getJointMin() const
 {
@@ -470,8 +587,9 @@ vpColVector vpRobotFranka::getJointMin() const
   return q_min;
 }
 /*!
-  Get maximum joint values.
-  \return A 7-dimension vector that contains the maximum joint values for the 7 dof. All the values are expressed in radians.
+  Gets maximum joint values.
+  \return A 7-dimension vector that contains the maximum joint values for the 7 dof.
+  All the values are expressed in radians.
  */
 vpColVector vpRobotFranka::getJointMax() const
 {
@@ -480,6 +598,29 @@ vpColVector vpRobotFranka::getJointMax() const
     q_max[i] = m_q_max[i];
 
   return q_max;
+}
+
+/*!
+ * Return the \f$ ^{e}{\bf M}_c\f$ homogeneous transformation that gives the position
+ * of the camera frame (or in general of any tool frame) in the robot end-effector frame.
+ */
+vpHomogeneousMatrix vpRobotFranka::get_eMc() const
+{
+  return m_eMc;
+}
+
+/*!
+ * Set the \f$ ^{e}{\bf M}_c\f$ homogeneous transformation that gives the position
+ * of the camera frame (or in general of any tool frame) in the robot end-effector frame.
+ *
+ * This transformation has to be set before controlling the robot cartesian velocity in
+ * the camera frame or getting the position of the robot in the camera frame.
+ *
+ * \param[in] eMc : End-effector to camera frame transformation.
+ */
+void vpRobotFranka::set_eMc(const vpHomogeneousMatrix &eMc)
+{
+  m_eMc = eMc;
 }
 
 

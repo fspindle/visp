@@ -63,7 +63,96 @@
 
   \ingroup group_robot_real_arm
 
-  This class is a wrapper over the libfranka component part of the [Franka Control Interface] (FCI).
+  This class is a wrapper over the [libfranka](https://github.com/frankaemika/libfranka)
+  component part of the [Franka Control Interface](https://frankaemika.github.io/docs/) (FCI).
+
+  Before using vpRobotFranka follow the
+  [installation instructions](https://frankaemika.github.io/docs/installation.html#) to install
+  libfranka. We suggest to
+  [build libfranka from source](https://frankaemika.github.io/docs/installation.html#building-libfranka)
+  if you are not using ROS.
+
+  Moreover, you need also to setup a real-time kernel following these
+  [instructions](https://frankaemika.github.io/docs/installation.html#setting-up-the-real-time-kernel).
+
+  Up to now, this class provides the following capabilities to:
+  - move to a given joint position using setPosition() that is blocking and that returns only when the robot
+    has reached the desired position.
+  \code
+    vpRobotFranka robot("192.168.1.1");
+
+    vpColVector q_d(7);
+    q_d[3] = -M_PI_2;
+    q_d[5] = M_PI_2;
+    q_d[6] = M_PI_4;
+    std::cout << "Move to joint position: " << q_d.t() << std::endl;
+    robot.setPosition(vpRobot::JOINT_STATE, q_d);
+  \endcode
+  - move applying a joint velocity using setVelocity(). This function is not blocking.
+  \code
+    vpRobotFranka robot("192.168.1.1");
+
+    robot.setRobotState(vpRobot::STATE_VELOCITY_CONTROL);
+
+    vpColVector dq_d(7, 0);
+    dq_d[4] = vpMath::rad(-20.);
+    dq_d[6] = vpMath::rad(20.);
+    while(1) {
+      robot.setVelocity(vpRobot::JOINT_STATE, dq_d);
+      ...
+    }
+  \endcode
+  - move applying a cartesian velocity to the end-effector using setVelocity(). This function is not blocking.
+  \code
+    vpRobotFranka robot("192.168.1.1");
+
+    vpColVector ve(6);
+    ve_d[2] = 0.02; // vz = 2 cm/s goes down
+
+    while(1) {
+      robot.setVelocity(vpRobot::END_EFFECTOR_FRAME, ve_d);
+      ...
+    }
+  \endcode
+  - get the joint position using getPosition()
+  \code
+    vpRobotFranka robot("192.168.1.1");
+
+    vpColVector q;
+    while(1) {
+      robot.getPosition(vpRobot::JOINT_STATE, q);
+      ...
+    }
+  \endcode
+  - get the cartesian end-effector position using getPosition(). This function is not blocking.
+  \code
+    vpRobotFranka robot("192.168.1.1");
+
+    vpPoseVector wPe;
+    vpHomogeneousMatrix wMe;
+    while(1) {
+      robot.getPosition(vpRobot::END_EFFECTOR_FRAME, wPe);
+      wMe.buildFrom(wPe);
+      ...
+    }
+  \endcode
+
+  What is not implemented is:
+  - move to a given cartesian end-effector position
+
+  Known issues:
+  - sometimes the joint to joint trajectory generator provided by Franka complains about discontinuities.
+
+  We provide also the getHandler() function that allows to acces to the robot handler and call the native
+  [libfranka API](https://frankaemika.github.io/libfranka/index.html) fonctionalities:
+  \code
+    vpRobotFranka robot("192.168.1.1");
+
+    franka::Robot *handler = robot.getHandler();
+
+    // Get end-effector cartesian position
+    std::array<double, 16> pose = handler->readOnce().O_T_EE;
+  \endcode
 
 */
 class VISP_EXPORT vpRobotFranka : public vpRobot
@@ -76,7 +165,7 @@ private:
   /*!
     This function is not implemented.
    */
-  void getDisplacement(const vpRobot::vpControlFrameType frame, vpColVector &q) {};
+  void getDisplacement(const vpRobot::vpControlFrameType, vpColVector &) {};
   franka::RobotState getRobotInternalState();
   void init();
 
@@ -97,6 +186,7 @@ private:
 
   std::array<double, 7> m_dq_des;   // Desired joint velocity
   vpColVector m_ve_des;             // Desired cartesian end-effector velocity
+  vpHomogeneousMatrix m_eMc;
 
 public:
   vpRobotFranka();
@@ -110,6 +200,8 @@ public:
                franka::RealtimeConfig realtime_config = franka::RealtimeConfig::kEnforce);
 
   vpHomogeneousMatrix get_fMe(const vpColVector &q);
+  vpHomogeneousMatrix get_fMc(const vpColVector &q);
+  vpHomogeneousMatrix get_eMc() const;
 
   void get_eJe(vpMatrix &eJe);
   void get_fJe(vpMatrix &fJe);
@@ -130,9 +222,10 @@ public:
   vpColVector getJointMin() const;
   vpColVector getJointMax() const;
 
-  void getPosition(const vpRobot::vpControlFrameType frame, vpColVector &joint);
+  void getPosition(const vpRobot::vpControlFrameType frame, vpColVector &position);
   void getPosition(const vpRobot::vpControlFrameType frame, vpPoseVector &pose);
 
+  void set_eMc(const vpHomogeneousMatrix &eMc);
   void setPosition(const vpRobot::vpControlFrameType frame, const vpColVector &position);
   void setPositioningVelocity(const double velocity);
 
