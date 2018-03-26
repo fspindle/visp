@@ -106,11 +106,27 @@
   \code
     vpRobotFranka robot("192.168.1.1");
 
-    vpColVector ve(6);
+    vpColVector ve_d(6);
     ve_d[2] = 0.02; // vz = 2 cm/s goes down
 
     while(1) {
       robot.setVelocity(vpRobot::END_EFFECTOR_FRAME, ve_d);
+      ...
+    }
+  \endcode
+  - move applying a cartesian velocity to the camera frame (or a given tool frame) using setVelocity().
+    The camera frame (or a tool frame) location wrt the end-effector is set using set_eMc(). This function is not blocking.
+  \code
+    vpRobotFranka robot("192.168.1.1");
+    vpHomogeneousMatrix eMc;
+    // update eMc
+    robot.set_eMc(eMc);
+
+    vpColVector vc_d(6);
+    vc_d[2] = 0.02; // vz = 2 cm/s is along the camera optical axis
+
+    while(1) {
+      robot.setVelocity(vpRobot::CAMERA_FRAME, vc_d);
       ...
     }
   \endcode
@@ -133,6 +149,21 @@
     while(1) {
       robot.getPosition(vpRobot::END_EFFECTOR_FRAME, wPe);
       wMe.buildFrom(wPe);
+      ...
+    }
+  \endcode
+  - get the cartesian camera (or tool) frame position using getPosition(). This function is not blocking.
+  \code
+    vpRobotFranka robot("192.168.1.1");
+    vpHomogeneousMatrix eMc;
+    // update eMc
+    robot.set_eMc(eMc);
+
+    vpPoseVector wPc;
+    vpHomogeneousMatrix wMc;
+    while(1) {
+      robot.getPosition(vpRobot::CAMERA_FRAME, wPc);
+      wMc.buildFrom(wPc);
       ...
     }
   \endcode
