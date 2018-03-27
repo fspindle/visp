@@ -54,13 +54,12 @@
 #include <visp3/core/vpTime.h>
 #include <visp3/core/vpMatrix.h>
 
-//#define FORCE_JACOBIAN_6_BY_6
-
 #ifdef VISP_HAVE_FRANKA
 void vpJointVelTrajGenerator::control_thread(franka::Robot *robot,
                                              std::atomic_bool &stop,
                                              const vpRobot::vpControlFrameType &frame,
-                                             const vpColVector &ve_des, // end-effector velocity
+                                             const vpHomogeneousMatrix &eMc,
+                                             const vpColVector &v_cart_des, // end-effector velocity
                                              const std::array<double, 7> &dq_des, // joint velocity
                                              const std::array<double, 7> &q_min,
                                              const std::array<double, 7> &q_max,
@@ -69,17 +68,12 @@ void vpJointVelTrajGenerator::control_thread(franka::Robot *robot,
                                              franka::RobotState &robot_state,
                                              std::mutex &mutex)
 {
-//  std::cout << "DBG: control_thread() in ++++++++++: " << m_njoints <<  std::endl;
-
   double time = 0.0;
   double delta_t = 0.001;
   std::array<double, 7> q_prev;
   franka::Model model = robot->loadModel();
-#ifdef FORCE_JACOBIAN_6_BY_6
-  vpMatrix eJe(6, 6);
-#else
-  vpMatrix eJe(6, 7);
-#endif
+  vpMatrix eJe(6, 7), fJe(6, 7);
+  vpVelocityTwistMatrix eVc(eMc);
 
   std::ofstream log_time("time.log");
   std::ofstream log_q_mes("q-mes.log");
@@ -87,16 +81,11 @@ void vpJointVelTrajGenerator::control_thread(franka::Robot *robot,
   std::ofstream log_dq_des("dq-des.log");
   std::ofstream log_dq_cmd("dq-cmd.log");
   std::ofstream log_v_des("v-des.log");
-  std::ofstream log_pseudo_inv("pseudo_inv.log");
-  std::ofstream log_eJe("eJe.log");
 
-  auto joint_velocity_callback = [=, &log_time, &log_q_mes, &log_dq_mes, &log_dq_des, &log_dq_cmd, &log_v_des, &log_pseudo_inv, &log_eJe, &time, &q_prev, &dq_des, &stop, &robot_state, &mutex]
+  auto joint_velocity_callback = [=, &log_time, &log_q_mes, &log_dq_mes, &log_dq_des, &log_dq_cmd, &log_v_des, &time, &q_prev, &dq_des, &stop, &robot_state, &mutex]
       (const franka::RobotState& state, franka::Duration period) -> franka::JointVelocities {
 
     time += period.toSec();
-    log_time << time << std::endl;
-
-//    std::cout << "DBG: time " << time << std::endl;
 
     static vpJointVelTrajGenerator joint_vel_traj_generator;
 
@@ -122,18 +111,17 @@ void vpJointVelTrajGenerator::control_thread(franka::Robot *robot,
 
     joint_vel_traj_generator.applyVel(dq_des_, q_cmd, dq_cmd);
 
-//    std::cout << "DBG apply joint vel: " << dq_cmd[0] << " " << dq_cmd[1] << " " <<  dq_cmd[2] << " " <<  dq_cmd[3] << " " <<  dq_cmd[4] << " " <<  dq_cmd[5]<< " " <<  dq_cmd[6] << std::endl;
-
+    log_time << time << std::endl;
     log_q_mes << std::fixed << std::setprecision(8) << state.q_d[0] << " " << state.q_d[1] << " " << state.q_d[2] << " " << state.q_d[3] << " " << state.q_d[4] << " " << state.q_d[5] << " " << state.q_d[6] << std::endl;
     log_dq_mes << std::fixed << std::setprecision(8) << state.dq_d[0] << " " << state.dq_d[1] << " " << state.dq_d[2] << " " << state.dq_d[3] << " " << state.dq_d[4] << " " << state.dq_d[5] << " " << state.dq_d[6] << std::endl;
-    log_dq_des << std::fixed << std::setprecision(8) << dq_cmd[0] << " " << dq_cmd[1] << " " << dq_cmd[2] << " " << dq_cmd[3] << " " << dq_cmd[4] << " " << dq_cmd[5] << " " << dq_cmd[6] << std::endl;
+    log_dq_cmd << std::fixed << std::setprecision(8) << dq_cmd[0] << " " << dq_cmd[1] << " " << dq_cmd[2] << " " << dq_cmd[3] << " " << dq_cmd[4] << " " << dq_cmd[5] << " " << dq_cmd[6] << std::endl;
+    log_dq_des << std::fixed << std::setprecision(8) << dq_des_[0] << " " << dq_des_[1] << " " << dq_des_[2] << " " << dq_des_[3] << " " << dq_des_[4] << " " << dq_des_[5] << " " << dq_des_[6] << std::endl;
 
     franka::JointVelocities velocities = {dq_cmd[0], dq_cmd[1], dq_cmd[2], dq_cmd[3], dq_cmd[4], dq_cmd[5], dq_cmd[6]};
 
     static bool display_dbg = true;
     if (stop) {
       if (display_dbg) {
-//        std::cout << std::endl << "DBG: control_thread() asked to finish waiting for joint stop" << std::endl;
         display_dbg = false;
       }
       unsigned int stop = 0;
@@ -153,8 +141,6 @@ void vpJointVelTrajGenerator::control_thread(franka::Robot *robot,
         log_dq_des.close();
         log_dq_cmd.close();
         log_v_des.close();
-        log_pseudo_inv.close();
-        log_eJe.close();
         return franka::MotionFinished(velocities);
       }
     }
@@ -175,11 +161,10 @@ void vpJointVelTrajGenerator::control_thread(franka::Robot *robot,
     return limitRate(ddq_max, velocities.dq, state.dq_d);
   };
 
-  auto cartesian_velocity_callback = [=, &log_time, &log_q_mes, &log_dq_mes, &log_dq_des,  &log_dq_cmd, &log_v_des, &log_pseudo_inv, &log_eJe, &time, &model, &q_prev, &ve_des, &stop, &robot_state, &mutex]
+  auto cartesian_velocity_callback = [=, &log_time, &log_q_mes, &log_dq_mes, &log_dq_des,  &log_dq_cmd, &log_v_des, &time, &model, &q_prev, &v_cart_des, &stop, &robot_state, &mutex]
       (const franka::RobotState& state, franka::Duration period) -> franka::JointVelocities {
 
     time += period.toSec();
-    log_time << time << std::endl;
 
     static vpJointVelTrajGenerator joint_vel_traj_generator;
 
@@ -193,64 +178,42 @@ void vpJointVelTrajGenerator::control_thread(franka::Robot *robot,
       robot_state = state;
     }
 
-#ifdef FORCE_JACOBIAN_6_BY_6
     // Get robot Jacobian
-    std::array<double, 42> jacobian = model.bodyJacobian(franka::Frame::kEndEffector, state);
-    // Convert row-major to col-major
-    for (size_t i = 0; i < 6; i ++) { // TODO make a function
-      for (size_t j = 0; j < 7; j ++) {
-        if (j < 2)
+    if (frame == vpRobot::END_EFFECTOR_FRAME) {
+      std::array<double, 42> jacobian = model.bodyJacobian(franka::Frame::kEndEffector, state);
+      // Convert row-major to col-major
+      for (size_t i = 0; i < 6; i ++) { // TODO make a function
+        for (size_t j = 0; j < 7; j ++) {
           eJe[i][j] = jacobian[j*6 + i];
-        else if (j > 2)
-          eJe[i][j-1] = jacobian[j*6 + i];
+        }
       }
     }
-
-#else
-    // Get robot Jacobian
-    std::array<double, 42> jacobian = model.bodyJacobian(franka::Frame::kEndEffector, state);
-    // Convert row-major to col-major
-    for (size_t i = 0; i < 6; i ++) { // TODO make a function
-      for (size_t j = 0; j < 7; j ++) {
-        eJe[i][j] = jacobian[j*6 + i];
+    else if (frame == vpRobot::REFERENCE_FRAME) {
+      std::array<double, 42> jacobian = model.zeroJacobian(franka::Frame::kEndEffector, state);
+      // Convert row-major to col-major
+      for (size_t i = 0; i < 6; i ++) { // TODO make a function
+        for (size_t j = 0; j < 7; j ++) {
+          fJe[i][j] = jacobian[j*6 + i];
+        }
       }
     }
-#endif
 
     // Compute joint velocity
-    vpMatrix eJe_inv = eJe.pseudoInverse();
+    vpColVector q_dot;
 
-    vpMatrix test_id = eJe * eJe_inv;
-    vpColVector diag(test_id.getCols());
-    double norm_diag = 0;
-    double norm_matrix = 0;
-    for(size_t i=0; i<diag.size(); i++) {
-      norm_diag += test_id[i][i];
+    if (frame == vpRobot::END_EFFECTOR_FRAME) {
+      q_dot = eJe.pseudoInverse() * v_cart_des; // TODO introduce try catch
     }
-    for(size_t i=0; i<test_id.getRows(); i++) {
-      for(size_t j=0; j<test_id.getRows(); j++) {
-        norm_matrix += test_id[i][j];
-      }
+    else if (frame == vpRobot::TOOL_FRAME) {
+      q_dot = (eJe * eVc).pseudoInverse() * v_cart_des; // TODO introduce try catch
     }
-
-    vpColVector q_dot = eJe_inv * ve_des; // TODO introduce try catch
-
-#ifndef FORCE_JACOBIAN_6_BY_6
-    // Test to check if J * Jinv * v_input = v_input
-    vpColVector ve_test = eJe * eJe_inv * ve_des; // TODO: remove
-#endif
+    else if (frame == vpRobot::REFERENCE_FRAME) {
+      q_dot = (fJe * eVc).pseudoInverse() * v_cart_des; // TODO introduce try catch
+    }
 
     std::array<double, 7> dq_des;
-#ifdef FORCE_JACOBIAN_6_BY_6
-    for (size_t i = 0; i < 2; i++)
-      dq_des[i] = q_dot[i];
-    dq_des[2] = 0;
-    for (size_t i = 2; i < 6; i++)
-      dq_des[i+1] = q_dot[i];
-#else
     for (size_t i = 0; i < 7; i++) // TODO create a function to convert
       dq_des[i] = q_dot[i];
-#endif
 
     std::array<double, 7> q_cmd;
     std::array<double, 7> dq_cmd;
@@ -264,13 +227,12 @@ void vpJointVelTrajGenerator::control_thread(franka::Robot *robot,
 
     joint_vel_traj_generator.applyVel(dq_des_, q_cmd, dq_cmd);
 
+    log_time << time << std::endl;
     log_q_mes << std::fixed << std::setprecision(8) << state.q_d[0] << " " << state.q_d[1] << " " << state.q_d[2] << " " << state.q_d[3] << " " << state.q_d[4] << " " << state.q_d[5] << " " << state.q_d[6] << std::endl;
     log_dq_mes << std::fixed << std::setprecision(8) << state.dq_d[0] << " " << state.dq_d[1] << " " << state.dq_d[2] << " " << state.dq_d[3] << " " << state.dq_d[4] << " " << state.dq_d[5] << " " << state.dq_d[6] << std::endl;
     log_dq_cmd << std::fixed << std::setprecision(8) << dq_cmd[0] << " " << dq_cmd[1] << " " << dq_cmd[2] << " " << dq_cmd[3] << " " << dq_cmd[4] << " " << dq_cmd[5] << " " << dq_cmd[6] << std::endl;
     log_dq_des << std::fixed << std::setprecision(8) << dq_des_[0] << " " << dq_des_[1] << " " << dq_des_[2] << " " << dq_des_[3] << " " << dq_des_[4] << " " << dq_des_[5] << " " << dq_des_[6] << std::endl;
-    log_v_des << std::fixed << std::setprecision(8) << ve_des[0] << " " << ve_des[1] << " " << ve_des[2] << " " << ve_des[3] << " " << ve_des[4] << " " << ve_des[5] << std::endl;
-    log_pseudo_inv << std::fixed << std::setprecision(8) << norm_diag << " " << norm_matrix << " " << q_dot[0] << " " << q_dot[1] << " " << q_dot[2] << " " << q_dot[3] << " " << q_dot[4] << " " << q_dot[5] << " " << q_dot[6] << std::endl;
-    log_eJe << "--------------\n" << eJe_inv << std::endl;
+    log_v_des << std::fixed << std::setprecision(8) << v_cart_des[0] << " " << v_cart_des[1] << " " << v_cart_des[2] << " " << v_cart_des[3] << " " << v_cart_des[4] << " " << v_cart_des[5] << std::endl;
 
 //    std::cout << "DBG apply joint vel: " << dq_cmd[0] << " " << dq_cmd[1] << " " <<  dq_cmd[2] << " " <<  dq_cmd[3] << " " <<  dq_cmd[4] << " " <<  dq_cmd[5]<< " " <<  dq_cmd[6] << std::endl;
 
@@ -299,8 +261,6 @@ void vpJointVelTrajGenerator::control_thread(franka::Robot *robot,
         log_dq_des.close();
         log_dq_cmd.close();
         log_v_des.close();
-        log_pseudo_inv.close();
-        log_eJe.close();
         return franka::MotionFinished(velocities);
       }
     }
@@ -323,17 +283,15 @@ void vpJointVelTrajGenerator::control_thread(franka::Robot *robot,
 
   switch (frame) {
   case vpRobot::JOINT_STATE: {
-//    std::cout << "DBG: start joint_velocity_callback() ----------" << std::endl;
     robot->control(joint_velocity_callback);
-    break;
-  }
-  case vpRobot::END_EFFECTOR_FRAME: {
-//    std::cout << "DBG: start cartesian_velocity_callback() ----------" << std::endl;
-    robot->control(cartesian_velocity_callback);
     break;
   }
   case vpRobot::CAMERA_FRAME:
   case vpRobot::REFERENCE_FRAME:
+  case vpRobot::END_EFFECTOR_FRAME: {
+    robot->control(cartesian_velocity_callback);
+    break;
+  }
   case vpRobot::MIXT_FRAME: {
     throw vpException(vpException::fatalError, "Velocity controller not supported");
     break;

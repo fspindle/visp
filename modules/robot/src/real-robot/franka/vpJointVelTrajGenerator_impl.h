@@ -72,7 +72,8 @@ public:
 #ifdef VISP_HAVE_FRANKA
   void control_thread(franka::Robot *robot, std::atomic_bool &stop,
                       const vpRobot::vpControlFrameType &frame,
-                      const vpColVector &ve_des,
+                      const vpHomogeneousMatrix &eMc,
+                      const vpColVector &v_cart_des,
                       const std::array<double, 7> &dq_des,
                       const std::array<double, 7> &q_min,
                       const std::array<double, 7> &q_max,

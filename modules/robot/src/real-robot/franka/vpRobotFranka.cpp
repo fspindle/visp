@@ -68,7 +68,7 @@ vpRobotFranka::vpRobotFranka()
 vpRobotFranka::vpRobotFranka(const std::string &franka_address, franka::RealtimeConfig realtime_config)
   : vpRobot(), m_handler(NULL), m_positionningVelocity(20.), m_controlThread(), m_controlThreadIsRunning(false),
     m_controlThreadStopAsked(false), m_q_min(), m_q_max(), m_dq_max(), m_ddq_max(), m_robot_state(),
-    m_mutex(), m_dq_des(), m_ve_des(), m_eMc()
+    m_mutex(), m_dq_des(), m_v_cart_des(), m_eMc()
 {
   init();
   connect(franka_address, realtime_config);
@@ -146,8 +146,8 @@ void vpRobotFranka::connect(const std::string &franka_address, franka::RealtimeC
  * \param[in] frame : Type of position to retrieve. Admissible values are:
  * - vpRobot::JOINT_STATE to get the 7 joint positions.
  * - vpRobot::END_EFFECTOR_FRAME to retrieve the cartesian position of the end-effector frame wrt the robot base frame.
- * - vpRobot::CAMERA_FRAME to retrieve the cartesian position of the camera frame (or more generally a tool frame)
- *   wrt the robot base frame.
+ * - vpRobot::CAMERA_FRAME to retrieve the cartesian position of the camera frame (or more generally a tool frame
+ *   vpRobot::TOOL_FRAME) wrt the robot base frame.
  * \param[out] position : Robot position. When joint position is asked this vector is 7-dim. Otherwise for a cartesian
  * position this vector is 6-dim. Its content is similar to a vpPoseVector, with first the 3 tranlations in meter
  * and then the 3 orientations in radian as a \f$\theta {\bf u}\f$ vector (see vpThetaUVector).
@@ -180,7 +180,7 @@ void vpRobotFranka::getPosition(const vpRobot::vpControlFrameType frame, vpColVe
     }
     break;
   }
-  case CAMERA_FRAME: {
+  case TOOL_FRAME: { // same a CAMERA_FRAME
     position.resize(6);
     vpHomogeneousMatrix fMc = get_fMc(q);
     vpPoseVector fPc(fMc);
@@ -249,8 +249,8 @@ vpHomogeneousMatrix vpRobotFranka::get_fMc(const vpColVector &q)
  * Get robot cartesian position.
  * \param[in] frame : Type of cartesian position to retrieve. Admissible values are:
  * - vpRobot::END_EFFECTOR_FRAME to retrieve the cartesian position of the end-effector frame wrt the robot base frame.
- * - vpRobot::CAMERA_FRAME to retrieve the cartesian position of the camera frame (or more generally a tool frame)
- *   wrt the robot base frame.
+ * - vpRobot::CAMERA_FRAME to retrieve the cartesian position of the camera frame (or more generally a tool frame
+ *   vpRobot::TOOL_FRAME) wrt the robot base frame.
  * \param[out] pose : Robot cartesian position. This vector is 6-dim. Its content is similar to a
  * vpPoseVector, with first the 3 tranlations in meter and then the 3 orientations in radian as a
  *  \f$\theta {\bf u}\f$ vector (see vpThetaUVector).
@@ -276,7 +276,7 @@ void vpRobotFranka::getPosition(const vpRobot::vpControlFrameType frame, vpPoseV
     pose.buildFrom(fMe);
     break;
   }
-  case CAMERA_FRAME: {
+  case TOOL_FRAME: {
     pose.buildFrom(fMe * m_eMc);
     break;
   }
@@ -455,7 +455,8 @@ vpRobot::vpRobotStateType vpRobotFranka::setRobotState(vpRobot::vpRobotStateType
   - When cartesian velocities have to be applied in the reference frame (or in a frame
     also called fixed frame in ViSP), frame should be set to vpRobot::REFERENCE_FRAME,
     \f$ vel = [^{f} v_x, ^{f} v_y, ^{f} v_z, ^{f}
-    \omega_x, ^{f} \omega_y, ^{f} \omega_z]^T \f$ is a velocity twist vector
+    \omega_x, ^{f} \omega_y, ^{f} \omega_z]^T \f$ is a velocity twist vector corresponding
+    to the velocity of the origin of the camera frame (or tool frame)
     expressed in the reference frame, with translations velocities \f$ ^{f} v_x,
     ^{f} v_y, ^{f} v_z \f$ in m/s and rotation velocities \f$ ^{f}\omega_x, ^{f}
     \omega_y, ^{f} \omega_z \f$ in rad/s.
@@ -463,16 +464,18 @@ vpRobot::vpRobotStateType vpRobotFranka::setRobotState(vpRobot::vpRobotStateType
   - When cartesian velocities have to be applied in the end-effector frame,
     frame should be set to vpRobot::END_EFFECTOR_FRAME,
     \f$ vel = [^{e} v_x, ^{e} v_y, ^{e} v_z, ^{e} \omega_x, ^{e} \omega_y,
-    ^{e} \omega_z]^T \f$ is a velocity twist vector
+    ^{e} \omega_z]^T \f$ is a velocity twist vector corresponding
+    to the velocity of the origin of the end-effector frame
     expressed in the end-effector frame, with translations velocities \f$ ^{e} v_x,
     ^{e} v_y, ^{e} v_z \f$ in m/s and rotation velocities \f$ ^{e}\omega_x, ^{e}
     \omega_y, ^{e} \omega_z \f$ in rad/s.
 
   - When cartesian velocities have to be applied in the camera frame or more
-    generally in a tool frame, frame should be set to vpRobot::CAMERA_FRAME,
+    generally in a tool frame, frame should be set to vpRobot::CAMERA_FRAME or vpRobot::TOOL_FRAME,
     \f$ vel = [^{c} v_x, ^{c} v_y, ^{c} v_z, ^{c} \omega_x, ^{c} \omega_y,
-    ^{c} \omega_z]^T \f$ is a velocity twist vector
-    expressed in the camera or tool frame, with translations velocities \f$ ^{c} v_x,
+    ^{c} \omega_z]^T \f$ is a velocity twist vector corresponding
+    to the velocity of the origin of the camera (or tool frame) frame
+    expressed in the camera (or tool frame), with translations velocities \f$ ^{c} v_x,
     ^{c} v_y, ^{c} v_z \f$ in m/s and rotation velocities \f$ ^{c}\omega_x, ^{c}
     \omega_y, ^{c} \omega_z \f$ in rad/s.
 
@@ -514,6 +517,8 @@ void vpRobotFranka::setVelocity(const vpRobot::vpControlFrameType frame, const v
   }
 
     // Saturation in cartesian space
+  case vpRobot::TOOL_FRAME:
+  case vpRobot::REFERENCE_FRAME:
   case vpRobot::END_EFFECTOR_FRAME: {
     if (vel.size() != 6) {
       throw vpRobotException(vpRobotException::wrongStateError,
@@ -526,13 +531,11 @@ void vpRobotFranka::setVelocity(const vpRobot::vpControlFrameType frame, const v
     for (unsigned int i = 3; i < 6; i++)
       vel_max[i] = getMaxRotationVelocity();
 
-    m_ve_des = vpRobot::saturateVelocities(vel, vel_max, true);
+    m_v_cart_des = vpRobot::saturateVelocities(vel, vel_max, true);
 
     break;
   }
 
-  case vpRobot::CAMERA_FRAME:
-  case vpRobot::REFERENCE_FRAME:
   case vpRobot::MIXT_FRAME: {
     throw vpRobotException(vpRobotException::wrongStateError,
                            "Velocity controller not supported");
@@ -545,7 +548,7 @@ void vpRobotFranka::setVelocity(const vpRobot::vpControlFrameType frame, const v
 //    std::cout << "DBG: Start control thread... ++++++++++++++++++++" << std::endl;
     m_controlThread = std::thread(&vpJointVelTrajGenerator::control_thread, vpJointVelTrajGenerator(),
                                   std::ref(m_handler), std::ref(m_controlThreadStopAsked),
-                                  frame, std::ref(m_ve_des), std::ref(m_dq_des),
+                                  frame, m_eMc, std::ref(m_v_cart_des), std::ref(m_dq_des),
                                   std::cref(m_q_min), std::cref(m_q_max), std::cref(m_dq_max), std::cref(m_ddq_max),
                                   std::ref(m_robot_state), std::ref(m_mutex));
   }

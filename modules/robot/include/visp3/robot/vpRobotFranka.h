@@ -88,7 +88,7 @@
     std::cout << "Move to joint position: " << q_d.t() << std::endl;
     robot.setPosition(vpRobot::JOINT_STATE, q_d);
   \endcode
-  - move applying a joint velocity using setVelocity(). This function is not blocking.
+  - move applying a joint velocity using setVelocity(). This function is non-blocking.
   \code
     vpRobotFranka robot("192.168.1.1");
 
@@ -102,7 +102,7 @@
       ...
     }
   \endcode
-  - move applying a cartesian velocity to the end-effector using setVelocity(). This function is not blocking.
+  - move applying a cartesian velocity to the end-effector using setVelocity(). This function is non-blocking.
   \code
     vpRobotFranka robot("192.168.1.1");
 
@@ -115,10 +115,10 @@
     }
   \endcode
   - move applying a cartesian velocity to the camera frame (or a given tool frame) using setVelocity().
-    The camera frame (or a tool frame) location wrt the end-effector is set using set_eMc(). This function is not blocking.
+    The camera frame (or a tool frame) location wrt the end-effector is set using set_eMc(). This function is non-blocking.
   \code
     vpRobotFranka robot("192.168.1.1");
-    vpHomogeneousMatrix eMc;
+    vpHomogeneousMatrix eMc; // Position of the camera wrt the end-effector
     // update eMc
     robot.set_eMc(eMc);
 
@@ -130,6 +130,22 @@
       ...
     }
   \endcode
+    If the tool attached to the end-effector is not a camera, you can do exactly the same using:
+  \code
+    vpRobotFranka robot("192.168.1.1");
+    vpHomogeneousMatrix eMt;
+    // update eMt, the position of the tool wrt the end-effector frame
+    robot.set_eMc(eMt);
+
+    vpColVector vt_d(6);
+    vt_d[2] = 0.02; // vt = 2 cm/s is along tool z axis
+
+    while(1) {
+      robot.setVelocity(vpRobot::TOOL_FRAME, vt_d);
+      ...
+    }
+  \endcode
+
   - get the joint position using getPosition()
   \code
     vpRobotFranka robot("192.168.1.1");
@@ -140,7 +156,7 @@
       ...
     }
   \endcode
-  - get the cartesian end-effector position using getPosition(). This function is not blocking.
+  - get the cartesian end-effector position using getPosition(). This function is non-blocking.
   \code
     vpRobotFranka robot("192.168.1.1");
 
@@ -152,11 +168,11 @@
       ...
     }
   \endcode
-  - get the cartesian camera (or tool) frame position using getPosition(). This function is not blocking.
+  - get the cartesian camera (or tool) frame position using getPosition(). This function is non-blocking.
   \code
     vpRobotFranka robot("192.168.1.1");
     vpHomogeneousMatrix eMc;
-    // update eMc
+    // update eMc, the position of the camera wrt the end-effector frame
     robot.set_eMc(eMc);
 
     vpPoseVector wPc;
@@ -164,6 +180,21 @@
     while(1) {
       robot.getPosition(vpRobot::CAMERA_FRAME, wPc);
       wMc.buildFrom(wPc);
+      ...
+    }
+  \endcode
+    If the tool attached to the end-effector is not a camera, you can do exactly the same using:
+  \code
+    vpRobotFranka robot("192.168.1.1");
+    vpHomogeneousMatrix eMt;
+    // update eMt, the position of the tool wrt the end-effector frame
+    robot.set_eMc(eMt);
+
+    vpPoseVector wPt;
+    vpHomogeneousMatrix wMt;
+    while(1) {
+      robot.getPosition(vpRobot::TOOL_FRAME, wPt);
+      wMt.buildFrom(wPt);
       ...
     }
   \endcode
@@ -216,7 +247,7 @@ private:
   std::mutex m_mutex;               // Mutex to protect m_robot_state
 
   std::array<double, 7> m_dq_des;   // Desired joint velocity
-  vpColVector m_ve_des;             // Desired cartesian end-effector velocity
+  vpColVector m_v_cart_des;             // Desired cartesian velocity either in reference, end-effector, camera, or tool frame
   vpHomogeneousMatrix m_eMc;
 
 public:
