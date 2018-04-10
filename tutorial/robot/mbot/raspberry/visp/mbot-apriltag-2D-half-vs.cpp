@@ -78,7 +78,7 @@ int main(int argc, const char **argv)
   // if motor left: led 3 blue
   // if motor right: led 4 blue
 
-  vpSerial *serial;
+  vpSerial *serial = NULL;
   if (! serial_off) {
     serial = new vpSerial("/dev/ttyAMA0", 115200);
 
