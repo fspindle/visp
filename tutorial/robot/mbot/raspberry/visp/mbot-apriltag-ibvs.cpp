@@ -3,19 +3,13 @@
 #include <visp3/gui/vpDisplayGDI.h>
 #include <visp3/gui/vpDisplayOpenCV.h>
 #include <visp3/gui/vpDisplayX.h>
-#ifdef VISP_HAVE_XML2
 #include <visp3/core/vpXmlParserCamera.h>
-#endif
-#ifdef VISP_HAVE_V4L2
 #include <visp3/sensor/vpV4l2Grabber.h>
-#endif
 #include <visp3/io/vpImageIo.h>
-
 #include <visp3/visual_features/vpFeatureBuilder.h>
 #include <visp3/visual_features/vpFeatureDepth.h>
 #include <visp3/visual_features/vpFeaturePoint.h>
 #include <visp3/vs/vpServo.h>
-
 #include <visp3/robot/vpUnicycle.h>
 #include <visp3/core/vpSerial.h>
 
@@ -233,6 +227,10 @@ int main(int argc, const char **argv)
         if (! serial_off) {
 //        serial->write("LED_RING=2,0,10,0\n"); // Switch on led 2 to green: tag detected
         }
+
+        vpPolygon polygon(detector.getPolygon(0));
+        double surface = polygon.getArea();
+        std::cout << "Surface: " << surface << std::endl;
 
         Z = cMo_vec[0][2][3];
 
