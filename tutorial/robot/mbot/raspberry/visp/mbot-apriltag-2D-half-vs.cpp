@@ -1,27 +1,20 @@
-//! \example mbot-apriltag-controller.cpp
+//! \example mbot-apriltag-2D-half-vs.cpp.cpp
 #include <visp3/detection/vpDetectorAprilTag.h>
 #include <visp3/gui/vpDisplayGDI.h>
-#include <visp3/gui/vpDisplayOpenCV.h>
 #include <visp3/gui/vpDisplayX.h>
-#ifdef VISP_HAVE_XML2
 #include <visp3/core/vpXmlParserCamera.h>
-#endif
-#ifdef VISP_HAVE_V4L2
 #include <visp3/sensor/vpV4l2Grabber.h>
-#endif
 #include <visp3/io/vpImageIo.h>
-
 #include <visp3/visual_features/vpFeatureBuilder.h>
 #include <visp3/visual_features/vpFeatureDepth.h>
 #include <visp3/visual_features/vpFeaturePoint.h>
 #include <visp3/vs/vpServo.h>
-
 #include <visp3/robot/vpUnicycle.h>
 #include <visp3/core/vpSerial.h>
 
 int main(int argc, const char **argv)
 {
-#if defined(VISP_HAVE_APRILTAG) && (defined(VISP_HAVE_V4L2) || defined(VISP_HAVE_OPENCV))
+#if defined(VISP_HAVE_APRILTAG) && defined(VISP_HAVE_V4L2)
   int opt_device = 0;
   vpDetectorAprilTag::vpAprilTagFamily tagFamily = vpDetectorAprilTag::TAG_36h11;
   vpDetectorAprilTag::vpPoseEstimationMethod poseEstimationMethod = vpDetectorAprilTag::HOMOGRAPHY_VIRTUAL_VS;
@@ -51,7 +44,7 @@ int main(int argc, const char **argv)
       camera_name = std::string(argv[i + 1]);
     } else if (std::string(argv[i]) == "--display_tag") {
       display_tag = true;
-#if !(defined(VISP_HAVE_X11) || defined(VISP_HAVE_GDI) || defined(VISP_HAVE_OPENCV))
+#if !(defined(VISP_HAVE_X11) || defined(VISP_HAVE_GDI))
     } else if (std::string(argv[i]) == "--display_on") {
       display_on = true;
 #endif
@@ -71,7 +64,7 @@ int main(int argc, const char **argv)
                    "TAG_36ARTOOLKIT,"
                    " 3: TAG_25h9, 4: TAG_25h7, 5: TAG_16h5)]"
                    " [--display_tag]";
-#if (defined(VISP_HAVE_X11) || defined(VISP_HAVE_GDI) || defined(VISP_HAVE_OPENCV))
+#if defined(VISP_HAVE_X11) || defined(VISP_HAVE_GDI)
       std::cout << " [--display_on]";
 #endif
       std::cout << " [--serial_off] [--help]" << std::endl;
@@ -96,25 +89,12 @@ int main(int argc, const char **argv)
   try {
     vpImage<unsigned char> I;
 
-    //! [Construct grabber]
-#if defined(VISP_HAVE_V4L2)
     vpV4l2Grabber g;
     std::ostringstream device;
     device << "/dev/video" << opt_device;
     g.setDevice(device.str());
     g.setScale(1);
     g.acquire(I);
-#elif defined(VISP_HAVE_OPENCV)
-    cv::VideoCapture cap(opt_device); // open the default camera
-    if (!cap.isOpened()) {            // check if we succeeded
-      std::cout << "Failed to open the camera" << std::endl;
-      return EXIT_FAILURE;
-    }
-    cv::Mat frame;
-    cap >> frame; // get a new frame from camera
-    vpImageConvert::convert(frame, I);
-#endif
-    //! [Construct grabber]
 
     vpDisplay *d = NULL;
     if (display_on) {
@@ -122,8 +102,6 @@ int main(int argc, const char **argv)
       d = new vpDisplayX(I);
 #elif defined(VISP_HAVE_GDI)
       d = new vpDisplayGDI(I);
-#elif defined(VISP_HAVE_OPENCV)
-      d = new vpDisplayOpenCV(I);
 #endif
     }
 
@@ -200,14 +178,7 @@ int main(int argc, const char **argv)
 
     std::vector<double> time_vec;
     for (;;) {
-      //! [Acquisition]
-#if defined(VISP_HAVE_V4L2)
       g.acquire(I);
-#elif defined(VISP_HAVE_OPENCV)
-      cap >> frame; // get a new frame from camera
-      vpImageConvert::convert(frame, I);
-#endif
-      //! [Acquisition]
 
       vpDisplay::display(I);
 
@@ -316,8 +287,8 @@ int main(int argc, const char **argv)
 #ifndef VISP_HAVE_APRILTAG
   std::cout << "ViSP is not build with Apriltag support" << std::endl;
 #endif
-#if !(defined(VISP_HAVE_V4L2) || defined(VISP_HAVE_OPENCV))
-  std::cout << "ViSP is not build with v4l2 or OpenCV support" << std::endl;
+#if !defined(VISP_HAVE_V4L2)
+  std::cout << "ViSP is not build with v4l2 support" << std::endl;
 #endif
   std::cout << "Install missing 3rd parties, configure and build ViSP to run this tutorial" << std::endl;
   return EXIT_SUCCESS;

@@ -10,7 +10,8 @@ endif()
 find_package(VISP REQUIRED visp_core visp_detection visp_io visp_gui visp_sensor visp_vs)
 
 set(tutorial_cpp
-  mbot-apriltag-controller.cpp
+  mbot-apriltag-ibvs.cpp
+  mbot-apriltag-2D-half-vs.cpp
   test-serial-mbot.cpp
 )
 

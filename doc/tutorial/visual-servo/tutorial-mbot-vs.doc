@@ -242,18 +242,18 @@ To run this test on the Raspberry Pi:
 
 \section mbot_pi_vs Visual-servoing with Raspberry Pi
 
-The next step is now to run the visual servoing example implemented in mbot-apriltag-controller.cpp. If you build ViSP from source as explained in \ref tutorial-install-raspberry the corresponding binary is available in `/home/pi/visp-ws/visp-build/robot/mbot/raspberry/visp/`. Run `./mbot-apriltag-controller --help` to see which are the command line options available.
+The next step is now to run the visual servoing example implemented in mbot-apriltag-2D-half-vs.cpp. If you build ViSP from source as explained in \ref tutorial-install-raspberry the corresponding binary is available in `/home/pi/visp-ws/visp-build/robot/mbot/raspberry/visp/`. Run `./mbot-apriltag-2D-half-vs --help` to see which are the command line options available.
 
     $ cd /home/pi/visp-ws/visp-build/robot/mbot/raspberry/visp
-    $ ./mbot-apriltag-controller --display_on
+    $ ./mbot-apriltag-2D-half-vs --display_on
 
 \section mbot_pi_service Howto launch the demo once mBot powered on 
 
-It is possible to transform the `mbot-apriltag-controller` demo into a service on the Raspberry Pi in order to start the binary when raspberry has booted. To this end, we need to install a daemon.
+It is possible to transform the `mbot-apriltag-2D-half-vs` demo into a service on the Raspberry Pi in order to start the binary when raspberry has booted. To this end, we need to install a daemon.
 
 If you follow \ref tutorial-install-raspberry, there is already a daemon in `/home/pi/visp-ws/visp/tutorial/robot/mbot/raspberry/daemon`. You need to edit `visual-servo` file and adapt the location of the visual-servo binary location.
 
-    DAEMON="/home/pi/visp-ws/visp-build/robot/mbot/raspberry/visp/mbot-apriltag-controller"
+    DAEMON="/home/pi/visp-ws/visp-build/robot/mbot/raspberry/visp/mbot-apriltag-2D-half-vs"
 
 Install the daemon
 
