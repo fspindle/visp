@@ -169,7 +169,7 @@ int main(int argc, const char **argv)
     vpFeaturePoint s_x, s_xd;
     vpImagePoint cog;
     double Z, Zd;
-    Z = Zd = 0.3;
+    Z = Zd = 1./10000.;
 
     // Create the current x visual feature
     vpFeatureBuilder::create(s_x, cam, cog);
@@ -232,7 +232,7 @@ int main(int argc, const char **argv)
         double surface = polygon.getArea();
         std::cout << "Surface: " << surface << std::endl;
 
-        Z = cMo_vec[0][2][3];
+        Z = 1. / surface;
 
         vpFeatureBuilder::create(s_x, cam, detector.getCog(0));
         s_x.set_Z(Z);
