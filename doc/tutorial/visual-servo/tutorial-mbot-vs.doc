@@ -1,6 +1,6 @@
 /**
 
-\page tutorial-mbot-pbvs Tutorial: PBVS with mBot Ranger educational robot kit 
+\page tutorial-mbot-vs Tutorial: Visual-servoing with mBot Ranger educational robot kit 
 \tableofcontents
 
 \section mbot_intro Introduction
@@ -240,7 +240,7 @@ To run this test on the Raspberry Pi:
     $ cd /home/pi/visp-ws/visp-build/tutorial/detection/tag
     $ ./tutorial-apriltag-detector-live
 
-\section mbot_pi_pbvs Visual-servoing with Raspberry Pi
+\section mbot_pi_vs Visual-servoing with Raspberry Pi
 
 The next step is now to run the visual servoing example implemented in mbot-apriltag-controller.cpp. If you build ViSP from source as explained in \ref tutorial-install-raspberry the corresponding binary is available in `/home/pi/visp-ws/visp-build/robot/mbot/raspberry/visp/`. Run `./mbot-apriltag-controller --help` to see which are the command line options available.
 
