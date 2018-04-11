@@ -261,7 +261,7 @@ It is possible to transform the `mbot-apriltag-2D-half-vs` demo into a service o
 
 If you follow \ref tutorial-install-raspberry, there is already a daemon in `/home/pi/visp-ws/visp/tutorial/robot/mbot/raspberry/daemon`. You need to edit `visual-servo` file and adapt the location of the visual-servo binary location.
 
-    DAEMON="/home/pi/visp-ws/visp-build/robot/mbot/raspberry/visp/mbot-apriltag-ibvs"
+    DAEMON="/home/pi/visp-ws/visp-build/tutorial/robot/mbot/raspberry/visp/mbot-apriltag-ibvs"
 
 Install the daemon
 

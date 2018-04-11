@@ -1,6 +1,6 @@
 #! /bin/sh
 
-DAEMON="/home/pi/visp-ws/visp-build/robot/mbot/raspberry/visp/mbot-apriltag-ibvs"
+DAEMON="/home/pi/visp-ws/visp-build/tutorial/robot/mbot/raspberry/visp/mbot-apriltag-ibvs"
 
 PID_FILE="/var/run/visual-servo.pid" 
 PATH="/sbin:/bin:/usr/sbin:/usr/bin"
