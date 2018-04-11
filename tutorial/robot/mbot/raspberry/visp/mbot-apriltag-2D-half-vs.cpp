@@ -90,9 +90,9 @@ int main(int argc, const char **argv)
     vpImage<unsigned char> I;
 
     vpV4l2Grabber g;
-    std::ostringstream device;
-    device << "/dev/video" << device;
-    g.setDevice(device.str());
+    std::ostringstream device_name;
+    device_name << "/dev/video" << device;
+    g.setDevice(device_name.str());
     g.setScale(1);
     g.acquire(I);
 
