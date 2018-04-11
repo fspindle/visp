@@ -15,7 +15,7 @@
 int main(int argc, const char **argv)
 {
 #if defined(VISP_HAVE_APRILTAG) && defined(VISP_HAVE_V4L2)
-  int opt_device = 0;
+  int device = 0;
   vpDetectorAprilTag::vpAprilTagFamily tagFamily = vpDetectorAprilTag::TAG_36h11;
   vpDetectorAprilTag::vpPoseEstimationMethod poseEstimationMethod = vpDetectorAprilTag::HOMOGRAPHY_VIRTUAL_VS;
   double tagSize = 0.053;
@@ -31,13 +31,13 @@ int main(int argc, const char **argv)
     if (std::string(argv[i]) == "--pose_method" && i + 1 < argc) {
       poseEstimationMethod = (vpDetectorAprilTag::vpPoseEstimationMethod)atoi(argv[i + 1]);
     } else if (std::string(argv[i]) == "--tag_size" && i + 1 < argc) {
-      tagSize = atof(argv[i + 1]);
+      tagSize = std::atof(argv[i + 1]);
     } else if (std::string(argv[i]) == "--input" && i + 1 < argc) {
-      opt_device = atoi(argv[i + 1]);
+      device = std::atoi(argv[i + 1]);
     } else if (std::string(argv[i]) == "--quad_decimate" && i + 1 < argc) {
       quad_decimate = (float)atof(argv[i + 1]);
     } else if (std::string(argv[i]) == "--nthreads" && i + 1 < argc) {
-      nThreads = atoi(argv[i + 1]);
+      nThreads = std::atoi(argv[i + 1]);
     } else if (std::string(argv[i]) == "--intrinsic" && i + 1 < argc) {
       intrinsic_file = std::string(argv[i + 1]);
     } else if (std::string(argv[i]) == "--camera_name" && i + 1 < argc) {
@@ -91,7 +91,7 @@ int main(int argc, const char **argv)
 
     vpV4l2Grabber g;
     std::ostringstream device;
-    device << "/dev/video" << opt_device;
+    device << "/dev/video" << device;
     g.setDevice(device.str());
     g.setScale(1);
     g.acquire(I);
@@ -287,7 +287,7 @@ int main(int argc, const char **argv)
 #ifndef VISP_HAVE_APRILTAG
   std::cout << "ViSP is not build with Apriltag support" << std::endl;
 #endif
-#if !defined(VISP_HAVE_V4L2)
+#ifndef VISP_HAVE_V4L2
   std::cout << "ViSP is not build with v4l2 support" << std::endl;
 #endif
   std::cout << "Install missing 3rd parties, configure and build ViSP to run this tutorial" << std::endl;
