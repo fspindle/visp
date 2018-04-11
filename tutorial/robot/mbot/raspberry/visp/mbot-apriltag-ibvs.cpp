@@ -49,10 +49,6 @@ int main(int argc, const char **argv)
       serial_off = true;
     } else if (std::string(argv[i]) == "--tag_family" && i + 1 < argc) {
       tagFamily = (vpDetectorAprilTag::vpAprilTagFamily)std::atoi(argv[i + 1]);
-    } else if (std::string(argv[i]) == "--integrator_off") {
-      integrator_off = true;
-    } else if (std::string(argv[i]) == "--integrator_mu" && i + 1 < argc) {
-      integrator_mu = std::atof(argv[i + 1]);
     } else if (std::string(argv[i]) == "--help" || std::string(argv[i]) == "-h") {
       std::cout << "Usage: " << argv[0]
                 << " [--input <camera input>] [--tag_size <tag_size in m>]"
@@ -61,7 +57,6 @@ int main(int argc, const char **argv)
                    " [--tag_family <family> (0: TAG_36h11, 1: TAG_36h10, 2: "
                    "TAG_36ARTOOLKIT,"
                    " 3: TAG_25h9, 4: TAG_25h7, 5: TAG_16h5)]"
-                   " [--integrator_off] [--integrator_mu <mu value>]"
                    " [--display_tag]";
 #if (defined(VISP_HAVE_X11) || defined(VISP_HAVE_GDI))
       std::cout << " [--display_on]";
