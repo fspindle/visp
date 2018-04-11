@@ -222,7 +222,7 @@ int main(int argc, const char **argv)
         // Compute the control law. Velocities are computed in the mobile robot reference frame
         v = task.computeControlLaw();
 
-        std::cout << "Send velocity to the pionner: " << v[0] << " m/s " << vpMath::deg(v[1]) << " deg/s" << std::endl;
+        std::cout << "Send velocity to the mbot: " << v[0] << " m/s " << vpMath::deg(v[1]) << " deg/s" << std::endl;
 
         task.print();
         double radius = 0.0325;

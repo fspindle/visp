@@ -25,8 +25,6 @@ int main(int argc, const char **argv)
   bool display_tag = false;
   bool display_on = false;
   bool serial_off = false;
-  bool integrator_off = false;
-  double integrator_mu = 0.4;
 
   for (int i = 1; i < argc; i++) {
     if (std::string(argv[i]) == "--tag_size" && i + 1 < argc) {
@@ -116,9 +114,6 @@ int main(int argc, const char **argv)
     std::cout << "cam:\n" << cam << std::endl;
     std::cout << "tagFamily: " << tagFamily << std::endl;
     std::cout << "tagSize: " << tagSize << std::endl;
-    std::cout << "integrator_off: " << integrator_off << std::endl;
-    if (! integrator_off)
-      std::cout << "integrator mu: " << integrator_mu << std::endl;
 
     vpDetectorAprilTag detector(tagFamily);
 
@@ -235,22 +230,7 @@ int main(int argc, const char **argv)
         // Compute the control law. Velocities are computed in the mobile robot reference frame
         v = task.computeControlLaw();
 
-        if (! integrator_off) {
-          vpColVector error = task.getError();
-          if (std::fabs(error[0]) < (20 / cam.get_px()) && std::fabs(error[1]) < 0.05) {
-            sum_de_dt += error;
-            v -= integrator_mu * task.getTaskJacobianPseudoInverse() * sum_de_dt;
-
-            vpDisplay::displayText(I, 80, 20, "Use integrator", vpColor::red);
-            std::cout << "Integrator, v: " << v.t() << std::endl;
-          }
-          else {
-            std::cout << "Quit Integrator" << "\n";
-            sum_de_dt = 0.0;
-          }
-        }
-
-        std::cout << "Send velocity to the pionner: " << v[0] << " m/s " << vpMath::deg(v[1]) << " deg/s" << std::endl;
+        std::cout << "Send velocity to the mbot: " << v[0] << " m/s " << vpMath::deg(v[1]) << " deg/s" << std::endl;
 
         task.print();
         double radius = 0.0325;
