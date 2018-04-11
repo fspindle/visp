@@ -25,7 +25,7 @@ int main(int argc, const char **argv)
   bool display_tag = false;
   bool display_on = false;
   bool serial_off = false;
-  bool integrator = true; //false;
+  bool integrator_off = false;
   double integrator_mu = 0.4;
 
   for (int i = 1; i < argc; i++) {
@@ -51,8 +51,8 @@ int main(int argc, const char **argv)
       serial_off = true;
     } else if (std::string(argv[i]) == "--tag_family" && i + 1 < argc) {
       tagFamily = (vpDetectorAprilTag::vpAprilTagFamily)std::atoi(argv[i + 1]);
-    } else if (std::string(argv[i]) == "--integrator") {
-      integrator = true;
+    } else if (std::string(argv[i]) == "--integrator_off") {
+      integrator_off = true;
     } else if (std::string(argv[i]) == "--integrator_mu" && i + 1 < argc) {
       integrator_mu = std::atof(argv[i + 1]);
     } else if (std::string(argv[i]) == "--help" || std::string(argv[i]) == "-h") {
@@ -63,7 +63,7 @@ int main(int argc, const char **argv)
                    " [--tag_family <family> (0: TAG_36h11, 1: TAG_36h10, 2: "
                    "TAG_36ARTOOLKIT,"
                    " 3: TAG_25h9, 4: TAG_25h7, 5: TAG_16h5)]"
-                   " [--integrator] [--integrator_mu <mu value>]"
+                   " [--integrator_off] [--integrator_mu <mu value>]"
                    " [--display_tag]";
 #if (defined(VISP_HAVE_X11) || defined(VISP_HAVE_GDI))
       std::cout << " [--display_on]";
@@ -116,8 +116,8 @@ int main(int argc, const char **argv)
     std::cout << "cam:\n" << cam << std::endl;
     std::cout << "tagFamily: " << tagFamily << std::endl;
     std::cout << "tagSize: " << tagSize << std::endl;
-    std::cout << "integrator: " << integrator << std::endl;
-    if (integrator)
+    std::cout << "integrator_off: " << integrator << std::endl;
+    if (! integrator_off)
       std::cout << "integrator mu: " << integrator_mu << std::endl;
 
     vpDetectorAprilTag detector(tagFamily);
@@ -235,7 +235,7 @@ int main(int argc, const char **argv)
         // Compute the control law. Velocities are computed in the mobile robot reference frame
         v = task.computeControlLaw();
 
-        if (integrator) {
+        if (! integrator_off) {
           vpColVector error = task.getError();
           if (std::fabs(error[0]) < (20 / cam.get_px()) && std::fabs(error[1]) < 0.05) {
             sum_de_dt += error;
