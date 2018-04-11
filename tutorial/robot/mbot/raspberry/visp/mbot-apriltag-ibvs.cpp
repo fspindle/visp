@@ -1,7 +1,6 @@
 //! \example mbot-apriltag-ibvs.cpp.cpp
 #include <visp3/detection/vpDetectorAprilTag.h>
 #include <visp3/gui/vpDisplayGDI.h>
-#include <visp3/gui/vpDisplayOpenCV.h>
 #include <visp3/gui/vpDisplayX.h>
 #include <visp3/core/vpXmlParserCamera.h>
 #include <visp3/sensor/vpV4l2Grabber.h>
@@ -15,10 +14,9 @@
 
 int main(int argc, const char **argv)
 {
-#if defined(VISP_HAVE_APRILTAG) && (defined(VISP_HAVE_V4L2) || defined(VISP_HAVE_OPENCV))
+#if defined(VISP_HAVE_APRILTAG) && defined(VISP_HAVE_V4L2)
   int opt_device = 0;
   vpDetectorAprilTag::vpAprilTagFamily tagFamily = vpDetectorAprilTag::TAG_36h11;
-  vpDetectorAprilTag::vpPoseEstimationMethod poseEstimationMethod = vpDetectorAprilTag::HOMOGRAPHY_VIRTUAL_VS;
   double tagSize = 0.053;
   float quad_decimate = 4.0;
   int nThreads = 2;
@@ -27,49 +25,47 @@ int main(int argc, const char **argv)
   bool display_tag = false;
   bool display_on = false;
   bool serial_off = false;
-  bool integrator = false;
+  bool integrator = true; //false;
   double integrator_mu = 0.4;
 
   for (int i = 1; i < argc; i++) {
-    if (std::string(argv[i]) == "--pose_method" && i + 1 < argc) {
-      poseEstimationMethod = (vpDetectorAprilTag::vpPoseEstimationMethod)atoi(argv[i + 1]);
-    } else if (std::string(argv[i]) == "--tag_size" && i + 1 < argc) {
-      tagSize = atof(argv[i + 1]);
+    if (std::string(argv[i]) == "--tag_size" && i + 1 < argc) {
+      tagSize = std::atof(argv[i + 1]);
     } else if (std::string(argv[i]) == "--input" && i + 1 < argc) {
-      opt_device = atoi(argv[i + 1]);
+      opt_device = std::atoi(argv[i + 1]);
     } else if (std::string(argv[i]) == "--quad_decimate" && i + 1 < argc) {
       quad_decimate = (float)atof(argv[i + 1]);
     } else if (std::string(argv[i]) == "--nthreads" && i + 1 < argc) {
-      nThreads = atoi(argv[i + 1]);
+      nThreads = std::atoi(argv[i + 1]);
     } else if (std::string(argv[i]) == "--intrinsic" && i + 1 < argc) {
       intrinsic_file = std::string(argv[i + 1]);
     } else if (std::string(argv[i]) == "--camera_name" && i + 1 < argc) {
       camera_name = std::string(argv[i + 1]);
     } else if (std::string(argv[i]) == "--display_tag") {
       display_tag = true;
-#if !(defined(VISP_HAVE_X11) || defined(VISP_HAVE_GDI) || defined(VISP_HAVE_OPENCV))
+#if !(defined(VISP_HAVE_X11) || defined(VISP_HAVE_GDI))
     } else if (std::string(argv[i]) == "--display_on") {
       display_on = true;
 #endif
     } else if (std::string(argv[i]) == "--serial_off") {
       serial_off = true;
     } else if (std::string(argv[i]) == "--tag_family" && i + 1 < argc) {
-      tagFamily = (vpDetectorAprilTag::vpAprilTagFamily)atoi(argv[i + 1]);
+      tagFamily = (vpDetectorAprilTag::vpAprilTagFamily)std::atoi(argv[i + 1]);
     } else if (std::string(argv[i]) == "--integrator") {
       integrator = true;
+    } else if (std::string(argv[i]) == "--integrator_mu" && i + 1 < argc) {
+      integrator_mu = std::atof(argv[i + 1]);
     } else if (std::string(argv[i]) == "--help" || std::string(argv[i]) == "-h") {
       std::cout << "Usage: " << argv[0]
                 << " [--input <camera input>] [--tag_size <tag_size in m>]"
                    " [--quad_decimate <quad_decimate>] [--nthreads <nb>]"
                    " [--intrinsic <intrinsic file>] [--camera_name <camera name>]"
-                   " [--pose_method <method> (0: HOMOGRAPHY_VIRTUAL_VS, 1: "
-                   "DEMENTHON_VIRTUAL_VS,"
-                   " 2: LAGRANGE_VIRTUAL_VS, 3: BEST_RESIDUAL_VIRTUAL_VS)]"
                    " [--tag_family <family> (0: TAG_36h11, 1: TAG_36h10, 2: "
                    "TAG_36ARTOOLKIT,"
                    " 3: TAG_25h9, 4: TAG_25h7, 5: TAG_16h5)]"
+                   " [--integrator] [--integrator_mu <mu value>]"
                    " [--display_tag]";
-#if (defined(VISP_HAVE_X11) || defined(VISP_HAVE_GDI) || defined(VISP_HAVE_OPENCV))
+#if (defined(VISP_HAVE_X11) || defined(VISP_HAVE_GDI))
       std::cout << " [--display_on]";
 #endif
       std::cout << " [--serial_off] [--help]" << std::endl;
@@ -94,25 +90,12 @@ int main(int argc, const char **argv)
   try {
     vpImage<unsigned char> I;
 
-    //! [Construct grabber]
-#if defined(VISP_HAVE_V4L2)
     vpV4l2Grabber g;
     std::ostringstream device;
     device << "/dev/video" << opt_device;
     g.setDevice(device.str());
     g.setScale(1);
     g.acquire(I);
-#elif defined(VISP_HAVE_OPENCV)
-    cv::VideoCapture cap(opt_device); // open the default camera
-    if (!cap.isOpened()) {            // check if we succeeded
-      std::cout << "Failed to open the camera" << std::endl;
-      return EXIT_FAILURE;
-    }
-    cv::Mat frame;
-    cap >> frame; // get a new frame from camera
-    vpImageConvert::convert(frame, I);
-#endif
-    //! [Construct grabber]
 
     vpDisplay *d = NULL;
     if (display_on) {
@@ -120,8 +103,6 @@ int main(int argc, const char **argv)
       d = new vpDisplayX(I);
 #elif defined(VISP_HAVE_GDI)
       d = new vpDisplayGDI(I);
-#elif defined(VISP_HAVE_OPENCV)
-      d = new vpDisplayOpenCV(I);
 #endif
     }
 
@@ -133,13 +114,15 @@ int main(int argc, const char **argv)
       parser.parse(cam, intrinsic_file, camera_name, vpCameraParameters::perspectiveProjWithoutDistortion);
   #endif
     std::cout << "cam:\n" << cam << std::endl;
-    std::cout << "poseEstimationMethod: " << poseEstimationMethod << std::endl;
     std::cout << "tagFamily: " << tagFamily << std::endl;
+    std::cout << "tagSize: " << tagSize << std::endl;
+    std::cout << "integrator: " << integrator << std::endl;
+    if (integrator)
+      std::cout << "integrator mu: " << integrator_mu << std::endl;
 
     vpDetectorAprilTag detector(tagFamily);
 
     detector.setAprilTagQuadDecimate(quad_decimate);
-    detector.setAprilTagPoseEstimationMethod(poseEstimationMethod);
     detector.setAprilTagNbThreads(nThreads);
     detector.setDisplayTag(display_tag);
 
@@ -202,9 +185,6 @@ int main(int argc, const char **argv)
       //! [Acquisition]
 #if defined(VISP_HAVE_V4L2)
       g.acquire(I);
-#elif defined(VISP_HAVE_OPENCV)
-      cap >> frame; // get a new frame from camera
-      vpImageConvert::convert(frame, I);
 #endif
       //! [Acquisition]
 
@@ -335,8 +315,8 @@ int main(int argc, const char **argv)
 #ifndef VISP_HAVE_APRILTAG
   std::cout << "ViSP is not build with Apriltag support" << std::endl;
 #endif
-#if !(defined(VISP_HAVE_V4L2) || defined(VISP_HAVE_OPENCV))
-  std::cout << "ViSP is not build with v4l2 or OpenCV support" << std::endl;
+#if !defined(VISP_HAVE_V4L2)
+  std::cout << "ViSP is not build with v4l2 support" << std::endl;
 #endif
   std::cout << "Install missing 3rd parties, configure and build ViSP to run this tutorial" << std::endl;
   return EXIT_SUCCESS;
