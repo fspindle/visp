@@ -169,7 +169,7 @@ int main(int argc, const char **argv)
     vpFeaturePoint s_x, s_xd;
     vpImagePoint cog;
     double Z, Zd;
-    Z = Zd = 1./10000. / (cam.get_px() * cam.get_py());
+    Z = Zd = 0.3;
 
     // Create the current x visual feature
     vpFeatureBuilder::create(s_x, cam, cog);
@@ -229,10 +229,11 @@ int main(int argc, const char **argv)
         }
 
         vpPolygon polygon(detector.getPolygon(0));
-        double surface = polygon.getArea() / (cam.get_px() * cam.get_py());
+        double surface = polygon.getArea();
         std::cout << "Surface: " << surface << std::endl;
 
-        Z = 1. / surface;
+        // Compute the distance from target surface and 3D size
+        Z = tagSize * cam.get_px() / sqrt(surface);
 
         vpFeatureBuilder::create(s_x, cam, detector.getCog(0));
         s_x.set_Z(Z);
