@@ -116,7 +116,7 @@ int main(int argc, const char **argv)
     std::cout << "cam:\n" << cam << std::endl;
     std::cout << "tagFamily: " << tagFamily << std::endl;
     std::cout << "tagSize: " << tagSize << std::endl;
-    std::cout << "integrator_off: " << integrator << std::endl;
+    std::cout << "integrator_off: " << integrator_off << std::endl;
     if (! integrator_off)
       std::cout << "integrator mu: " << integrator_mu << std::endl;
 
