@@ -1,23 +1,29 @@
 //! \example mbot-apriltag-ibvs.cpp.cpp
+#include <visp3/core/vpSerial.h>
+#include <visp3/core/vpXmlParserCamera.h>
+#include <visp3/core/vpMomentObject.h>
+#include <visp3/core/vpPoint.h>
+#include <visp3/core/vpMomentGravityCenter.h>
+#include <visp3/core/vpMomentDatabase.h>
+#include <visp3/core/vpMomentCentered.h>
+#include <visp3/core/vpMomentAreaNormalized.h>
 #include <visp3/detection/vpDetectorAprilTag.h>
 #include <visp3/gui/vpDisplayGDI.h>
 #include <visp3/gui/vpDisplayX.h>
-#include <visp3/core/vpXmlParserCamera.h>
 #include <visp3/sensor/vpV4l2Grabber.h>
 #include <visp3/io/vpImageIo.h>
 #include <visp3/visual_features/vpFeatureBuilder.h>
-#include <visp3/visual_features/vpFeatureDepth.h>
 #include <visp3/visual_features/vpFeaturePoint.h>
+#include <visp3/visual_features/vpFeatureMomentAreaNormalized.h>
 #include <visp3/vs/vpServo.h>
 #include <visp3/robot/vpUnicycle.h>
-#include <visp3/core/vpSerial.h>
 
 int main(int argc, const char **argv)
 {
 #if defined(VISP_HAVE_APRILTAG) && defined(VISP_HAVE_V4L2)
   int device = 0;
   vpDetectorAprilTag::vpAprilTagFamily tagFamily = vpDetectorAprilTag::TAG_36h11;
-  double tagSize = 0.053;
+  double tagSize = 0.065;
   float quad_decimate = 4.0;
   int nThreads = 2;
   std::string intrinsic_file = "";
@@ -125,7 +131,7 @@ int main(int argc, const char **argv)
 
     vpUnicycle robot;
     task.setServo(vpServo::EYEINHAND_L_cVe_eJe);
-    task.setInteractionMatrixType(vpServo::CURRENT, vpServo::PSEUDO_INVERSE);
+    task.setInteractionMatrixType(vpServo::DESIRED, vpServo::PSEUDO_INVERSE);
     task.setLambda(lambda);
     vpRotationMatrix cRe;
     cRe[0][0] = 0; cRe[0][1] = -1; cRe[0][2] =  0;
@@ -141,8 +147,7 @@ int main(int argc, const char **argv)
 
     std::cout << "eJe: \n" << eJe << std::endl;
 
-    // Current and desired visual feature associated to the x coordinate of
-    // the point
+    // Current and desired visual feature associated to the x coordinate of the point
     vpFeaturePoint s_x, s_xd;
     vpImagePoint cog;
     double Z, Zd;
@@ -154,21 +159,54 @@ int main(int argc, const char **argv)
     // Create the desired x* visual feature
     s_xd.buildFrom(0, 0, Zd);
 
-    // Add the feature
+    // Add the point feature
     task.addFeature(s_x, s_xd, vpFeaturePoint::selectX());
 
-    // Create the current log(Z/Z*) visual feature
-    vpFeatureDepth s_Z, s_Zd;
+    double X[4] = {-tagSize/2.,  tagSize/2., tagSize/2., -tagSize/2.};
+    double Y[4] = {-tagSize/2., -tagSize/2., tagSize/2.,  tagSize/2.};
+    std::vector<vpPoint> vec_P, vec_Pd;
+    double m_ad = 0;
+    for (int i = 0; i < 4; i++) {
+      vpPoint Pd(X[i], Y[i], 0);
+      vpHomogeneousMatrix cdMo(0, 0, Zd, 0, 0, 0);
+      Pd.track(cdMo); //
+      vec_Pd.push_back(Pd);
 
-    std::cout << "Z " << Z << std::endl;
-    s_Z.buildFrom(s_x.get_x(), s_x.get_y(), Z, 0); // log(Z/Z*) = 0 that's why the last parameter is 0
-    s_Zd.buildFrom(0, 0, Zd, 0); // The value of s* is 0 with Z=1 meter
+      // Compute moment area a at desired position: m_ad
+      m_ad += vpMath::sqr(Pd.get_x()) + vpMath::sqr(Pd.get_y());
+    }
+    std::vector<vpPoint> vec_P, vec_Pd;
+
+    vpMomentObject m_obj(3), m_obj_d(3);
+    vpMomentDatabase mdb, mdb_d;
+    vpMomentGravityCenter g, g_d;
+    vpMomentCentered mc, mc_d;
+    vpMomentAreaNormalized an(m_ad, Zd), an_d(m_ad, Zd); //declare normalized surface with
+
+    // Desired moments
+    m_obj_d.setType(vpMomentObject::DISCRETE); // Discrete mode for object
+    m_obj_d.fromVector(vec_Pd); // initialize the object with the points coordinates
+
+    g_d.linkTo(mdb_d);        // Add gravity center to database
+    mc_d.linkTo(mdb_d);       // Add centered moments to database
+    an_d.linkTo(mdb_d);       // Add area normalized to database
+    mdb_d.updateAll(m_obj_d); // All of the moments must be updated, not just an_d
+    g_d.compute();            // Compute gravity center moment
+    mc_d.compute();           // Compute centered moments AFTER gravity center
+    an_d.compute();           // Compute area centered moment AFTER centered moments
+
+    // Desired plane
+    double A = 0.0;
+    double B = 0.0;
+    double C = 1.0 / Zd;
+
+    // Construct area normalized features
+    vpFeatureMomentAreaNormalized s_an(mdb, A, B, C), s_an_d(mdb_d, A, B, C);
 
     // Add the feature
-    task.addFeature(s_Z, s_Zd);
+    task.addFeature(s_an, s_an_d);
 
     vpColVector v; // vz, wx
-    vpColVector sum_de_dt(2);
 
     std::vector<double> time_vec;
     for (;;) {
@@ -195,29 +233,41 @@ int main(int argc, const char **argv)
         vpDisplay::displayFrame(I, cMo_vec[i], cam, tagSize / 2, vpColor::none, 3);
       }
       //! [Display camera pose for each tag]
-      //!
-      //!       vpFeatureBuilder::create(s_x, cam, dot);
 
       if (detector.getNbObjects() == 1) {
         if (! serial_off) {
 //        serial->write("LED_RING=2,0,10,0\n"); // Switch on led 2 to green: tag detected
         }
 
-        vpPolygon polygon(detector.getPolygon(0));
-        double surface = polygon.getArea();
-        std::cout << "Surface: " << surface << std::endl;
-
-        // Compute the distance from target surface and 3D size
-        Z = tagSize * cam.get_px() / sqrt(surface);
-
         vpFeatureBuilder::create(s_x, cam, detector.getCog(0));
-        s_x.set_Z(Z);
+        s_x.set_Z(Z_d);
 
-        // Update log(Z/Z*) feature. Since the depth Z change, we need to update
-        // the intection matrix
-        s_Z.buildFrom(s_x.get_x(), s_x.get_y(), Z, log(Z / Zd));
+        // Update points
+        std::vector< vpImagePoint > vec_ip = detector.getPolygon(0);
+        vec_P.clear();
+        for (int i = 0; i < polygon.size(); i++) { // size = 4
+          double x = 0, y = 0;
+          vpPixelMeterConversion::convertPoint(cam, vec_ip[i], x, y);
+          vpPoint P;
+          P.set_x(x);
+          P.set_y(y);
+          vec_P.push_back(P);
+        }
 
-        std::cout << "cog: " << detector.getCog(0) << " Z: " << Z << std::endl;
+        // Current moments
+        m_obj.setType(vpMomentObject::DISCRETE); // Discrete mode for object
+        m_obj.fromVector(vec_P); // initialize the object with the points coordinates
+
+        g.linkTo(mdb);        // Add gravity center to database
+        mc.linkTo(mdb);       // Add centered moments to database
+        an.linkTo(mdb);       // Add area normalized to database
+        mdb.updateAll(m_obj); // All of the moments must be updated, not just an_d
+        g.compute();            // Compute gravity center moment
+        mc.compute();           // Compute centered moments AFTER gravity center
+        an.compute();           // Compute area centered moment AFTER centered moments
+
+        s_an.update(A, B, C);
+        s_an.compute_interaction();
 
         task.set_cVe(cVe);
         task.set_eJe(eJe);

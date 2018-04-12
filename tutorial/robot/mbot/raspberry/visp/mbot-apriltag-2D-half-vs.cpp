@@ -1,8 +1,9 @@
 //! \example mbot-apriltag-2D-half-vs.cpp.cpp
+#include <visp3/core/vpXmlParserCamera.h>
+#include <visp3/core/vpSerial.h>
 #include <visp3/detection/vpDetectorAprilTag.h>
 #include <visp3/gui/vpDisplayGDI.h>
 #include <visp3/gui/vpDisplayX.h>
-#include <visp3/core/vpXmlParserCamera.h>
 #include <visp3/sensor/vpV4l2Grabber.h>
 #include <visp3/io/vpImageIo.h>
 #include <visp3/visual_features/vpFeatureBuilder.h>
@@ -10,7 +11,6 @@
 #include <visp3/visual_features/vpFeaturePoint.h>
 #include <visp3/vs/vpServo.h>
 #include <visp3/robot/vpUnicycle.h>
-#include <visp3/core/vpSerial.h>
 
 int main(int argc, const char **argv)
 {
@@ -18,7 +18,7 @@ int main(int argc, const char **argv)
   int device = 0;
   vpDetectorAprilTag::vpAprilTagFamily tagFamily = vpDetectorAprilTag::TAG_36h11;
   vpDetectorAprilTag::vpPoseEstimationMethod poseEstimationMethod = vpDetectorAprilTag::HOMOGRAPHY_VIRTUAL_VS;
-  double tagSize = 0.053;
+  double tagSize = 0.065;
   float quad_decimate = 4.0;
   int nThreads = 2;
   std::string intrinsic_file = "";
@@ -146,8 +146,7 @@ int main(int argc, const char **argv)
 
     std::cout << "eJe: \n" << eJe << std::endl;
 
-    // Current and desired visual feature associated to the x coordinate of
-    // the point
+    // Current and desired visual feature associated to the x coordinate of the point
     vpFeaturePoint s_x, s_xd;
     vpImagePoint cog;
     double Z, Zd;
@@ -159,7 +158,7 @@ int main(int argc, const char **argv)
     // Create the desired x* visual feature
     s_xd.buildFrom(0, 0, Zd);
 
-    // Add the feature
+    // Add the point feature
     task.addFeature(s_x, s_xd, vpFeaturePoint::selectX());
 
     // Create the current log(Z/Z*) visual feature
