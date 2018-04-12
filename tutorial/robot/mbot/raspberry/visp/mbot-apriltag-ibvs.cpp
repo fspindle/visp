@@ -89,12 +89,12 @@ int main(int argc, const char **argv)
   try {
     vpImage<unsigned char> I;
 
-    vpV4l2Grabber g;
+    vpV4l2Grabber grabber;
     std::ostringstream device_name;
     device_name << "/dev/video" << device;
-    g.setDevice(device_name.str());
-    g.setScale(1);
-    g.acquire(I);
+    grabber.setDevice(device_name.str());
+    grabber.setScale(1);
+    grabber.acquire(I);
 
     vpDisplay *d = NULL;
     if (display_on) {
@@ -175,7 +175,6 @@ int main(int argc, const char **argv)
       // Compute moment area a at desired position: m_ad
       m_ad += vpMath::sqr(Pd.get_x()) + vpMath::sqr(Pd.get_y());
     }
-    std::vector<vpPoint> vec_P, vec_Pd;
 
     vpMomentObject m_obj(3), m_obj_d(3);
     vpMomentDatabase mdb, mdb_d;
@@ -211,9 +210,7 @@ int main(int argc, const char **argv)
     std::vector<double> time_vec;
     for (;;) {
       //! [Acquisition]
-#if defined(VISP_HAVE_V4L2)
-      g.acquire(I);
-#endif
+      grabber.acquire(I);
       //! [Acquisition]
 
       vpDisplay::display(I);
@@ -240,12 +237,12 @@ int main(int argc, const char **argv)
         }
 
         vpFeatureBuilder::create(s_x, cam, detector.getCog(0));
-        s_x.set_Z(Z_d);
+        s_x.set_Z(Zd);
 
         // Update points
         std::vector< vpImagePoint > vec_ip = detector.getPolygon(0);
         vec_P.clear();
-        for (int i = 0; i < polygon.size(); i++) { // size = 4
+        for (int i = 0; i < vec_ip.size(); i++) { // size = 4
           double x = 0, y = 0;
           vpPixelMeterConversion::convertPoint(cam, vec_ip[i], x, y);
           vpPoint P;
