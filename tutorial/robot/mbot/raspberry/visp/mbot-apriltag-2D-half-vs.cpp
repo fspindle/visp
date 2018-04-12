@@ -26,10 +26,11 @@ int main(int argc, const char **argv)
   bool display_tag = false;
   bool display_on = false;
   bool serial_off = false;
+  bool use_pose = false;
 
   for (int i = 1; i < argc; i++) {
-    if (std::string(argv[i]) == "--pose_method" && i + 1 < argc) {
-      poseEstimationMethod = (vpDetectorAprilTag::vpPoseEstimationMethod)atoi(argv[i + 1]);
+    if (std::string(argv[i]) == "--use_pose") {
+      use_pose = true;
     } else if (std::string(argv[i]) == "--tag_size" && i + 1 < argc) {
       tagSize = std::atof(argv[i + 1]);
     } else if (std::string(argv[i]) == "--input" && i + 1 < argc) {
@@ -56,12 +57,8 @@ int main(int argc, const char **argv)
       std::cout << "Usage: " << argv[0]
                 << " [--input <camera input>] [--tag_size <tag_size in m>]"
                    " [--quad_decimate <quad_decimate>] [--nthreads <nb>]"
-                   " [--intrinsic <intrinsic file>] [--camera_name <camera name>]"
-                   " [--pose_method <method> (0: HOMOGRAPHY_VIRTUAL_VS, 1: "
-                   "DEMENTHON_VIRTUAL_VS,"
-                   " 2: LAGRANGE_VIRTUAL_VS, 3: BEST_RESIDUAL_VIRTUAL_VS)]"
-                   " [--tag_family <family> (0: TAG_36h11, 1: TAG_36h10, 2: "
-                   "TAG_36ARTOOLKIT,"
+                   " [--intrinsic <intrinsic file>] [--camera_name <camera name>] [--use_pose]"
+                   " [--tag_family <family> (0: TAG_36h11, 1: TAG_36h10, 2: TAG_36ARTOOLKIT,"
                    " 3: TAG_25h9, 4: TAG_25h7, 5: TAG_16h5)]"
                    " [--display_tag]";
 #if defined(VISP_HAVE_X11) || defined(VISP_HAVE_GDI)
@@ -113,13 +110,14 @@ int main(int argc, const char **argv)
       parser.parse(cam, intrinsic_file, camera_name, vpCameraParameters::perspectiveProjWithoutDistortion);
   #endif
     std::cout << "cam:\n" << cam << std::endl;
-    std::cout << "poseEstimationMethod: " << poseEstimationMethod << std::endl;
+    std::cout << "use pose: " << use_pose << std::endl;
     std::cout << "tagFamily: " << tagFamily << std::endl;
 
     vpDetectorAprilTag detector(tagFamily);
 
     detector.setAprilTagQuadDecimate(quad_decimate);
-    detector.setAprilTagPoseEstimationMethod(poseEstimationMethod);
+    if (use_pose)
+      detector.setAprilTagPoseEstimationMethod(poseEstimationMethod);
     detector.setAprilTagNbThreads(nThreads);
     detector.setDisplayTag(display_tag);
 
@@ -184,7 +182,11 @@ int main(int argc, const char **argv)
 
       double t = vpTime::measureTimeMs();
       std::vector<vpHomogeneousMatrix> cMo_vec;
-      detector.detect(I, tagSize, cam, cMo_vec);
+      if (use_pose)
+        detector.detect(I, tagSize, cam, cMo_vec);
+      else
+        detector.detect(I);
+
       t = vpTime::measureTimeMs() - t;
       time_vec.push_back(t);
 
@@ -193,19 +195,29 @@ int main(int argc, const char **argv)
       vpDisplay::displayText(I, 40, 20, ss.str(), vpColor::red);
 
       //! [Display camera pose for each tag]
-      for (size_t i = 0; i < cMo_vec.size(); i++) {
-        vpDisplay::displayFrame(I, cMo_vec[i], cam, tagSize / 2, vpColor::none, 3);
+      if (use_pose) {
+        for (size_t i = 0; i < cMo_vec.size(); i++) {
+          vpDisplay::displayFrame(I, cMo_vec[i], cam, tagSize / 2, vpColor::none, 3);
+        }
       }
       //! [Display camera pose for each tag]
-      //!
-      //!       vpFeatureBuilder::create(s_x, cam, dot);
 
       if (detector.getNbObjects() == 1) {
         if (! serial_off) {
 //        serial->write("LED_RING=2,0,10,0\n"); // Switch on led 2 to green: tag detected
         }
 
-        Z = cMo_vec[0][2][3];
+        if (use_pose) {
+          Z = cMo_vec[0][2][3];
+        }
+        else {
+          vpPolygon polygon(detector.getPolygon(0));
+          double surface = polygon.getArea();
+          std::cout << "Surface: " << surface << std::endl;
+
+          // Compute the distance from target surface and 3D size
+          Z = tagSize * cam.get_px() / sqrt(surface);
+        }
 
         vpFeatureBuilder::create(s_x, cam, detector.getCog(0));
         s_x.set_Z(Z);
