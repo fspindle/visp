@@ -20,7 +20,7 @@
 
 int main(int argc, const char **argv)
 {
-#if defined(VISP_HAVE_APRILTAG) && defined(VISP_HAVE_V4L2)
+#if defined(VISP_HAVE_APRILTAG) //&& defined(VISP_HAVE_V4L2)
   int device = 0;
   vpDetectorAprilTag::vpAprilTagFamily tagFamily = vpDetectorAprilTag::TAG_36h11;
   double tagSize = 0.065;
@@ -150,8 +150,7 @@ int main(int argc, const char **argv)
     // Current and desired visual feature associated to the x coordinate of the point
     vpFeaturePoint s_x, s_xd;
     vpImagePoint cog;
-    double Z, Zd;
-    Z = Zd = 0.3;
+    double Zd = 0.3;
 
     // Create the current x visual feature
     vpFeatureBuilder::create(s_x, cam, cog);
@@ -205,6 +204,10 @@ int main(int argc, const char **argv)
     // Add the feature
     task.addFeature(s_an, s_an_d);
 
+    // Update desired area normalized feature
+    s_an_d.update(A, B, C);
+    s_an_d.compute_interaction();
+
     vpColVector v; // vz, wx
 
     std::vector<double> time_vec;
@@ -242,7 +245,7 @@ int main(int argc, const char **argv)
         // Update points
         std::vector< vpImagePoint > vec_ip = detector.getPolygon(0);
         vec_P.clear();
-        for (int i = 0; i < vec_ip.size(); i++) { // size = 4
+        for (size_t i = 0; i < vec_ip.size(); i++) { // size = 4
           double x = 0, y = 0;
           vpPixelMeterConversion::convertPoint(cam, vec_ip[i], x, y);
           vpPoint P;
