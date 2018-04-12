@@ -20,7 +20,7 @@
 
 int main(int argc, const char **argv)
 {
-#if defined(VISP_HAVE_APRILTAG) //&& defined(VISP_HAVE_V4L2)
+#if defined(VISP_HAVE_APRILTAG) && defined(VISP_HAVE_V4L2)
   int device = 0;
   vpDetectorAprilTag::vpAprilTagFamily tagFamily = vpDetectorAprilTag::TAG_36h11;
   double tagSize = 0.065;
