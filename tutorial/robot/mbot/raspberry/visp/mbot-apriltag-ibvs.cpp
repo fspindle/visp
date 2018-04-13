@@ -3,7 +3,6 @@
 #include <visp3/core/vpXmlParserCamera.h>
 #include <visp3/core/vpMomentObject.h>
 #include <visp3/core/vpPoint.h>
-#include <visp3/core/vpRGBa.h>
 #include <visp3/core/vpMomentGravityCenter.h>
 #include <visp3/core/vpMomentDatabase.h>
 #include <visp3/core/vpMomentCentered.h>
