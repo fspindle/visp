@@ -1,20 +1,18 @@
-//! \example mbot-apriltag-2D-half-vs.cpp.cpp
+//! \example mbot-apriltag-pbvs.cpp.cpp
 #include <visp3/core/vpXmlParserCamera.h>
 #include <visp3/core/vpSerial.h>
 #include <visp3/detection/vpDetectorAprilTag.h>
-#include <visp3/gui/vpDisplayGDI.h>
 #include <visp3/gui/vpDisplayX.h>
 #include <visp3/sensor/vpV4l2Grabber.h>
 #include <visp3/io/vpImageIo.h>
-#include <visp3/visual_features/vpFeatureBuilder.h>
 #include <visp3/visual_features/vpFeatureDepth.h>
-#include <visp3/visual_features/vpFeaturePoint.h>
+#include <visp3/visual_features/vpFeaturePoint3D.h>
 #include <visp3/vs/vpServo.h>
 #include <visp3/robot/vpUnicycle.h>
 
 int main(int argc, const char **argv)
 {
-#if defined(VISP_HAVE_APRILTAG) && defined(VISP_HAVE_V4L2)
+#if defined(VISP_HAVE_APRILTAG)// && defined(VISP_HAVE_V4L2)
   int device = 0;
   vpDetectorAprilTag::vpAprilTagFamily tagFamily = vpDetectorAprilTag::TAG_36h11;
   vpDetectorAprilTag::vpPoseEstimationMethod poseEstimationMethod = vpDetectorAprilTag::HOMOGRAPHY_VIRTUAL_VS;
@@ -26,12 +24,9 @@ int main(int argc, const char **argv)
   bool display_tag = false;
   bool display_on = false;
   bool serial_off = false;
-  bool use_pose = false;
 
   for (int i = 1; i < argc; i++) {
-    if (std::string(argv[i]) == "--use_pose") {
-      use_pose = true;
-    } else if (std::string(argv[i]) == "--tag_size" && i + 1 < argc) {
+    if (std::string(argv[i]) == "--tag_size" && i + 1 < argc) {
       tagSize = std::atof(argv[i + 1]);
     } else if (std::string(argv[i]) == "--input" && i + 1 < argc) {
       device = std::atoi(argv[i + 1]);
@@ -45,7 +40,7 @@ int main(int argc, const char **argv)
       camera_name = std::string(argv[i + 1]);
     } else if (std::string(argv[i]) == "--display_tag") {
       display_tag = true;
-#if !(defined(VISP_HAVE_X11) || defined(VISP_HAVE_GDI))
+#if !defined(VISP_HAVE_X11)
     } else if (std::string(argv[i]) == "--display_on") {
       display_on = true;
 #endif
@@ -57,11 +52,11 @@ int main(int argc, const char **argv)
       std::cout << "Usage: " << argv[0]
                 << " [--input <camera input>] [--tag_size <tag_size in m>]"
                    " [--quad_decimate <quad_decimate>] [--nthreads <nb>]"
-                   " [--intrinsic <intrinsic file>] [--camera_name <camera name>] [--use_pose]"
+                   " [--intrinsic <intrinsic file>] [--camera_name <camera name>]"
                    " [--tag_family <family> (0: TAG_36h11, 1: TAG_36h10, 2: TAG_36ARTOOLKIT,"
                    " 3: TAG_25h9, 4: TAG_25h7, 5: TAG_16h5)]"
                    " [--display_tag]";
-#if defined(VISP_HAVE_X11) || defined(VISP_HAVE_GDI)
+#if defined(VISP_HAVE_X11)
       std::cout << " [--display_on]";
 #endif
       std::cout << " [--serial_off] [--help]" << std::endl;
@@ -97,8 +92,6 @@ int main(int argc, const char **argv)
     if (display_on) {
 #ifdef VISP_HAVE_X11
       d = new vpDisplayX(I);
-#elif defined(VISP_HAVE_GDI)
-      d = new vpDisplayGDI(I);
 #endif
     }
 
@@ -110,14 +103,12 @@ int main(int argc, const char **argv)
       parser.parse(cam, intrinsic_file, camera_name, vpCameraParameters::perspectiveProjWithoutDistortion);
   #endif
     std::cout << "cam:\n" << cam << std::endl;
-    std::cout << "use pose: " << use_pose << std::endl;
     std::cout << "tagFamily: " << tagFamily << std::endl;
 
     vpDetectorAprilTag detector(tagFamily);
 
     detector.setAprilTagQuadDecimate(quad_decimate);
-    if (use_pose)
-      detector.setAprilTagPoseEstimationMethod(poseEstimationMethod);
+    detector.setAprilTagPoseEstimationMethod(poseEstimationMethod);
     detector.setAprilTagNbThreads(nThreads);
     detector.setDisplayTag(display_tag);
 
@@ -146,30 +137,22 @@ int main(int argc, const char **argv)
 
     std::cout << "eJe: \n" << eJe << std::endl;
 
-    // Current and desired visual feature associated to the x coordinate of the point
-    vpFeaturePoint s_x, s_xd;
-    vpImagePoint cog;
-    double Z, Zd;
-    Z = Zd = 0.3;
+    // Desired distance to the target
+    double Z_d = 0.3;
 
-    // Create the current x visual feature
-    vpFeatureBuilder::create(s_x, cam, cog);
+    // Create X_3D visual features
+    vpFeaturePoint3D s_X, s_X_d;
+    s_X.buildFrom(0, 0, Z_d);
+    s_X_d.buildFrom(0, 0, Z_d);
 
-    // Create the desired x* visual feature
-    s_xd.buildFrom(0, 0, Zd);
-
-    // Add the point feature
-    task.addFeature(s_x, s_xd, vpFeaturePoint::selectX());
-
-    // Create the current log(Z/Z*) visual feature
-    vpFeatureDepth s_Z, s_Zd;
-
-    std::cout << "Z " << Z << std::endl;
+    // Create log(Z/Z*) visual feature
+    vpFeatureDepth s_Z, s_Z_d;
     s_Z.buildFrom(s_x.get_x(), s_x.get_y(), Z, 0); // log(Z/Z*) = 0 that's why the last parameter is 0
-    s_Zd.buildFrom(0, 0, Zd, 0); // The value of s* is 0 with Z=1 meter
+    s_Zd.buildFrom(0, 0, Z_d, 0); // The value of s* is 0 with Z=1 meter
 
-    // Add the feature
-    task.addFeature(s_Z, s_Zd);
+    // Add the features
+    task.addFeature(s_X, s_X_d, vpFeaturePoint3D::selectX());
+    task.addFeature(s_Z, s_Z_d);
 
     vpColVector v; // vz, wx
 
@@ -181,10 +164,7 @@ int main(int argc, const char **argv)
 
       double t = vpTime::measureTimeMs();
       std::vector<vpHomogeneousMatrix> cMo_vec;
-      if (use_pose)
-        detector.detect(I, tagSize, cam, cMo_vec);
-      else
-        detector.detect(I);
+      detector.detect(I, tagSize, cam, cMo_vec);
 
       t = vpTime::measureTimeMs() - t;
       time_vec.push_back(t);
@@ -193,39 +173,26 @@ int main(int argc, const char **argv)
       ss << "Detection time: " << t << " ms for " << detector.getNbObjects() << " tags";
       vpDisplay::displayText(I, 40, 20, ss.str(), vpColor::red);
 
-      //! [Display camera pose for each tag]
-      if (use_pose) {
-        for (size_t i = 0; i < cMo_vec.size(); i++) {
-          vpDisplay::displayFrame(I, cMo_vec[i], cam, tagSize / 2, vpColor::none, 3);
-        }
-      }
-      //! [Display camera pose for each tag]
-
       if (detector.getNbObjects() == 1) {
+        //! [Display camera pose]
+        vpDisplay::displayFrame(I, cMo_vec[0], cam, tagSize / 2, vpColor::none, 3);
+        //! [Display camera pose]
+
         if (! serial_off) {
 //        serial->write("LED_RING=2,0,10,0\n"); // Switch on led 2 to green: tag detected
         }
 
-        if (use_pose) {
-          Z = cMo_vec[0][2][3];
-        }
-        else {
-          vpPolygon polygon(detector.getPolygon(0));
-          double surface = polygon.getArea();
-          std::cout << "Surface: " << surface << std::endl;
+        double X = cMo_vec[0][0][3];
+        double Y = cMo_vec[0][1][3];
+        double Z = cMo_vec[0][2][3];
 
-          // Compute the distance from target surface and 3D size
-          Z = tagSize * cam.get_px() / sqrt(surface);
-        }
+        // Update X_3D feature
+        s_X.set_XYZ(X, Y, Z);
 
-        vpFeatureBuilder::create(s_x, cam, detector.getCog(0));
-        s_x.set_Z(Z);
+        // Update log(Z/Z*) feature
+        s_Z.buildFrom(s_x.get_x(), s_x.get_y(), Z, log(Z / Z_d));
 
-        // Update log(Z/Z*) feature. Since the depth Z change, we need to update
-        // the intection matrix
-        s_Z.buildFrom(s_x.get_x(), s_x.get_y(), Z, log(Z / Zd));
-
-        std::cout << "cog: " << detector.getCog(0) << " Z: " << Z << std::endl;
+        std::cout << "X: " << X << " Z: " << Z << std::endl;
 
         task.set_cVe(cVe);
         task.set_eJe(eJe);

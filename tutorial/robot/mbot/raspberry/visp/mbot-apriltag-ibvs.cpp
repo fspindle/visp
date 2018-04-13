@@ -8,8 +8,8 @@
 #include <visp3/core/vpMomentCentered.h>
 #include <visp3/core/vpMomentAreaNormalized.h>
 #include <visp3/core/vpMomentGravityCenterNormalized.h>
+#include <visp3/core/vpPixelMeterConversion.h>
 #include <visp3/detection/vpDetectorAprilTag.h>
-#include <visp3/gui/vpDisplayGDI.h>
 #include <visp3/gui/vpDisplayX.h>
 #include <visp3/sensor/vpV4l2Grabber.h>
 #include <visp3/io/vpImageIo.h>
@@ -47,7 +47,7 @@ int main(int argc, const char **argv)
       camera_name = std::string(argv[i + 1]);
     } else if (std::string(argv[i]) == "--display_tag") {
       display_tag = true;
-#if !(defined(VISP_HAVE_X11) || defined(VISP_HAVE_GDI))
+#if !defined(VISP_HAVE_X11)
     } else if (std::string(argv[i]) == "--display_on") {
       display_on = true;
 #endif
@@ -64,7 +64,7 @@ int main(int argc, const char **argv)
                    "TAG_36ARTOOLKIT,"
                    " 3: TAG_25h9, 4: TAG_25h7, 5: TAG_16h5)]"
                    " [--display_tag]";
-#if (defined(VISP_HAVE_X11) || defined(VISP_HAVE_GDI))
+#if defined(VISP_HAVE_X11)
       std::cout << " [--display_on]";
 #endif
       std::cout << " [--serial_off] [--help]" << std::endl;
@@ -100,8 +100,6 @@ int main(int argc, const char **argv)
     if (display_on) {
 #ifdef VISP_HAVE_X11
       d = new vpDisplayX(I);
-#elif defined(VISP_HAVE_GDI)
-      d = new vpDisplayGDI(I);
 #endif
     }
 
@@ -152,28 +150,28 @@ int main(int argc, const char **argv)
 
     double X[4] = {-tagSize/2.,  tagSize/2., tagSize/2., -tagSize/2.};
     double Y[4] = {-tagSize/2., -tagSize/2., tagSize/2.,  tagSize/2.};
-    std::vector<vpPoint> vec_P, vec_Pd;
+    std::vector<vpPoint> vec_P, vec_P_d;
     double m_a_d = 0;
     for (int i = 0; i < 4; i++) {
-      vpPoint Pd(X[i], Y[i], 0);
-      vpHomogeneousMatrix cdMo(0, 0, Zd, 0, 0, 0);
-      Pd.track(cdMo); //
-      vec_Pd.push_back(Pd);
+      vpPoint P_d(X[i], Y[i], 0);
+      vpHomogeneousMatrix cdMo(0, 0, Z_d, 0, 0, 0);
+      P_d.track(cdMo); //
+      vec_P_d.push_back(P_d);
 
       // Compute moment area a at desired position: m_a_d
-      m_a_d += vpMath::sqr(Pd.get_x()) + vpMath::sqr(Pd.get_y());
+      m_a_d += vpMath::sqr(P_d.get_x()) + vpMath::sqr(P_d.get_y());
     }
 
     vpMomentObject m_obj(3), m_obj_d(3);
     vpMomentDatabase mdb, mdb_d;
     vpMomentGravityCenter g, g_d;
     vpMomentCentered mc, mc_d;
-    vpMomentAreaNormalized an(m_a_d, Zd), an_d(m_a_d, Z_d); // Declare normalized surface
-    vpMomentGravityCenterNormalized gn(), gn_d();                 // Declare normalized gravity center
+    vpMomentAreaNormalized an(m_a_d, Z_d), an_d(m_a_d, Z_d); // Declare normalized surface
+    vpMomentGravityCenterNormalized gn, gn_d;                // Declare normalized gravity center
 
     // Desired moments
     m_obj_d.setType(vpMomentObject::DISCRETE); // Discrete mode for object
-    m_obj_d.fromVector(vec_Pd); // initialize the object with the points coordinates
+    m_obj_d.fromVector(vec_P_d);                // Initialize the object with the points coordinates
 
     g_d.linkTo(mdb_d);        // Add gravity center to database
     mc_d.linkTo(mdb_d);       // Add centered moments to database

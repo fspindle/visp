@@ -2,7 +2,6 @@
 #include <visp3/core/vpXmlParserCamera.h>
 #include <visp3/core/vpSerial.h>
 #include <visp3/detection/vpDetectorAprilTag.h>
-#include <visp3/gui/vpDisplayGDI.h>
 #include <visp3/gui/vpDisplayX.h>
 #include <visp3/sensor/vpV4l2Grabber.h>
 #include <visp3/io/vpImageIo.h>
@@ -45,7 +44,7 @@ int main(int argc, const char **argv)
       camera_name = std::string(argv[i + 1]);
     } else if (std::string(argv[i]) == "--display_tag") {
       display_tag = true;
-#if !(defined(VISP_HAVE_X11) || defined(VISP_HAVE_GDI))
+#if !defined(VISP_HAVE_X11)
     } else if (std::string(argv[i]) == "--display_on") {
       display_on = true;
 #endif
@@ -61,7 +60,7 @@ int main(int argc, const char **argv)
                    " [--tag_family <family> (0: TAG_36h11, 1: TAG_36h10, 2: TAG_36ARTOOLKIT,"
                    " 3: TAG_25h9, 4: TAG_25h7, 5: TAG_16h5)]"
                    " [--display_tag]";
-#if defined(VISP_HAVE_X11) || defined(VISP_HAVE_GDI)
+#if defined(VISP_HAVE_X11)
       std::cout << " [--display_on]";
 #endif
       std::cout << " [--serial_off] [--help]" << std::endl;
@@ -97,8 +96,6 @@ int main(int argc, const char **argv)
     if (display_on) {
 #ifdef VISP_HAVE_X11
       d = new vpDisplayX(I);
-#elif defined(VISP_HAVE_GDI)
-      d = new vpDisplayGDI(I);
 #endif
     }
 
@@ -149,27 +146,27 @@ int main(int argc, const char **argv)
     // Current and desired visual feature associated to the x coordinate of the point
     vpFeaturePoint s_x, s_xd;
     vpImagePoint cog;
-    double Z, Zd;
-    Z = Zd = 0.3;
+    double Z, Z_d;
+    Z = Z_d = 0.3;
 
     // Create the current x visual feature
     vpFeatureBuilder::create(s_x, cam, cog);
 
     // Create the desired x* visual feature
-    s_xd.buildFrom(0, 0, Zd);
+    s_xd.buildFrom(0, 0, Z_d);
 
     // Add the point feature
     task.addFeature(s_x, s_xd, vpFeaturePoint::selectX());
 
-    // Create the current log(Z/Z*) visual feature
-    vpFeatureDepth s_Z, s_Zd;
+    // Create the log(Z/Z*) visual feature
+    vpFeatureDepth s_Z, s_Z_d;
 
     std::cout << "Z " << Z << std::endl;
     s_Z.buildFrom(s_x.get_x(), s_x.get_y(), Z, 0); // log(Z/Z*) = 0 that's why the last parameter is 0
-    s_Zd.buildFrom(0, 0, Zd, 0); // The value of s* is 0 with Z=1 meter
+    s_Z_d.buildFrom(0, 0, Z_d, 0); // The value of s* is 0 with Z=1 meter
 
     // Add the feature
-    task.addFeature(s_Z, s_Zd);
+    task.addFeature(s_Z, s_Z_d);
 
     vpColVector v; // vz, wx
 
@@ -193,15 +190,13 @@ int main(int argc, const char **argv)
       ss << "Detection time: " << t << " ms for " << detector.getNbObjects() << " tags";
       vpDisplay::displayText(I, 40, 20, ss.str(), vpColor::red);
 
-      //! [Display camera pose for each tag]
-      if (use_pose) {
-        for (size_t i = 0; i < cMo_vec.size(); i++) {
-          vpDisplay::displayFrame(I, cMo_vec[i], cam, tagSize / 2, vpColor::none, 3);
-        }
-      }
-      //! [Display camera pose for each tag]
-
       if (detector.getNbObjects() == 1) {
+        //! [Display camera pose]
+        if (use_pose) {
+          vpDisplay::displayFrame(I, cMo_vec[0], cam, tagSize / 2, vpColor::none, 3);
+        }
+        //! [Display camera pose]
+
         if (! serial_off) {
 //        serial->write("LED_RING=2,0,10,0\n"); // Switch on led 2 to green: tag detected
         }
@@ -223,7 +218,7 @@ int main(int argc, const char **argv)
 
         // Update log(Z/Z*) feature. Since the depth Z change, we need to update
         // the intection matrix
-        s_Z.buildFrom(s_x.get_x(), s_x.get_y(), Z, log(Z / Zd));
+        s_Z.buildFrom(s_x.get_x(), s_x.get_y(), Z, log(Z / Z_d));
 
         std::cout << "cog: " << detector.getCog(0) << " Z: " << Z << std::endl;
 
