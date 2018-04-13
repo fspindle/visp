@@ -11,12 +11,18 @@ This tutorial explains how to do a position-based visual-servoing with the mBot 
 
 The following material is requested:
 - mBot Ranger educational Kit and especially the pre-set <a href="http://www.makeblock.com/steam-kits/mbot-ranger/">Dashing Raptor</a> form that has a [Me Auriga](http://store.makeblock.com/maker-kits-STEM/me-auriga) board
-- Makeblock <a href="https://makeblockshop.eu/products/me-shield-for-raspberry-pi">ME Shield</a> for Raspberry Pi
-- We recommend the usage of <a href="https://www.raspberrypi.org/products/raspberry-pi-3-model-b/">Raspebby Pi 3</a> Model B or Model B+ even if the tutorial is also compatible with a Raspberry Pi 2. 
+- Makeblock <a href="https://makeblockshop.eu/products/me-shield-for-raspberry-pi">Me Shield</a> for Raspberry Pi
+- 1 RJ25 cable between the Me Shield and the Me Auriga port 5
+- we recommend the usage of <a href="https://www.raspberrypi.org/products/raspberry-pi-3-model-b/">Raspebby Pi 3</a> Model B or Model B+ even if the tutorial is also compatible with a Raspberry Pi 2. 
 - Raspberry Pi <a href="https://www.raspberrypi.org/products/camera-module-v2/">camera module V2</a>
 - an AprilTag that will serve as target for the visual servoing. \ref franka_prereq_target. 
 
 The communication between Raspberry Pi and mBot Auriga board is achieved via a [serial link](http://learn.makeblock.com/me-shield-for-raspberry-pi/). Images acquired on the Raspberry Pi are processed in order to detect the AprilTag pose. From this pose a visual-servoing computes the velocities that have to be send to the Me Auriga. On the Me Auriga there is an infinite loop that is waiting for velocities that have to be applied to the Dashing Raptor wheels. A watch dog ensure the mobile robot stops when nothing is sent throw the serial link after 1 second.
+
+The following video shows the result of this tutorial; the mBot Ranger follows the AprilTag target in order to maintain a given distance between the tag and the camera.
+\htmlonly
+<p align="center"><iframe width="560" height="315" src="https://www.youtube.com/embed/n50CFukmEYs" frameborder="0" allow="autoplay; encrypted-media" allowfullscreen></iframe></p>
+\endhtmlonly
 
 \note Before continuing we recommend that you succeed to follow \ref tutorial-install-raspberry and \ref tutorial-detection-apriltag.
 
@@ -49,7 +55,6 @@ Mount the Me Auriga over the Raspberry Pi
 \image html img-mbot-auriga-mounted.jpg
 Plug the cable between Me Shield and Me Auriga port 5
 \image html img-mbot-cable-mounted.jpg
-
 
 \section mbot_ranger mBot Ranger setup
 
@@ -203,12 +208,20 @@ First of all, with the Pi switched off, you’ll need to connect the Camera Modu
 This could be achieved following this [tutorial](https://projects.raspberrypi.org/en/projects/getting-started-with-picamera/4) or this
 [tutorial](http://visp-doc.inria.fr/doxygen/visp-daily/tutorial-install-raspberry.html#install_raspberry_camera).
 
-\section mbot_rpi_test Testing Raspberry Pi
+\section mbot_test Testing the setup
 
 \subsection mbot_rpi_test_serial Test serial port on RPi
 
-Here we use Raspberry Pi 3, a RS232/TTL 3-5,5V adapter and a home made adapter that is used to connect the RS232/TTL 3-5,5V adapter to the Raspberry Pi [GPIO connector](http://pi4j.com/images/j8header-3b.png). The home made adapter connects Raspberry PI GPIO pins 6 (GND), 8 (TxD UART), 10 (RxD UART) to a RS232 DB9 female connector.
+Here we use our Raspberry Pi 3 connected to an external power supply, a RS232/TTL 3-5,5V adapter and a home made adapter that is used to connect the RS232/TTL 3-5,5V adapter to the Raspberry Pi [GPIO connector](http://pi4j.com/images/j8header-3b.png). The home made adapter connects Raspberry PI GPIO pins 6 (GND), 8 (TxD UART), 10 (RxD UART) to a RS232 DB9 female connector. 
+
+\warning Don't forget here to unplug the RJ25 cable between the Me Shield and the Me Auriga board.
+ 
+The following image shows the Me Shield pinout
 \image html img-mbot-shield-wiring.jpg
+while the next image shows the usage:
+\image html img-mbot-serial-adapter.jpg
+
+The following table shows the wiring pinout:
 
 ~~~
 RPi GPIO                  | Me Shield | DB9 female  | Color
@@ -223,26 +236,54 @@ Now we can use two python files, `test-serial-write.py` who writes something on 
 To get these files use Subversion (even if code is handled with git):
 
     $ sudo apt-get install subversion
-    $ svn export https://github.com/lagadic/visp.git/trunk/tutorial/robot/mbot/raspberry/
+    $ svn export https://github.com/lagadic/visp.git/trunk/tutorial/robot/mbot/raspberry/python
+
+\note If you build ViSP from source as explained in \ref tutorial-install-raspberry the corresponding python files are available in ViSP source code in `/home/pi/visp-ws/visp/robot/mbot/raspberry/python`.
 
 After plugging the ME Shield to the Raspberry Pi and connecting the home made adapter to yo your laptop, you can test if you succeed to configure Raspberry Pi serial port, running on your laptop:
 
     $ sudo chmod a+rw /dev/ttyUSB0
     $ python test-serial-read.py
+    not blocked
+    not blocked
+    not blocked
+    Got 5: data: <non alpha characters>
+    not blocked
 
 and on the Raspberry Pi
 
     $ python test-serial-write.py
 
+After running `test-serial-write.py` you should see lines like `Got 5: data: <non alpha characters>` on the laptop side.
+
 \subsection mbot_rpi_test_tag_detection Testing Apriltag detection
 
-To test if you are able to acquire images from your camera and detect your Apriltag, you may run tutorial-apriltag-detector-live.cpp. If you build ViSP from source as explained in \ref tutorial-install-raspberry the corresponding binary is available in `/home/pi/visp-ws/visp-build/tutorial/detection/tag`.
+To test if you are able to acquire images from your RPi camera and detect your Apriltag, you may run tutorial-apriltag-detector-live.cpp. If you build ViSP from source as explained in \ref tutorial-install-raspberry the corresponding binary is available in `/home/pi/visp-ws/visp-build/tutorial/detection/tag`.
 
 To run this test on the Raspberry Pi:
 
     $ cd /home/pi/visp-ws/visp-build/tutorial/detection/tag
     $ ./tutorial-apriltag-detector-live
 
+
+\subsection mbot_test_motor Testing mBot Ranger control
+
+We provide also an other test in test-serial-mbot.cpp that allows to check if instructions send from the Raspberry Pi to the mBot Ranger by serial link is working. If you build ViSP from source as explained in \ref tutorial-install-raspberry the corresponding binary is available in `/home/pi/visp-ws/visp/robot/mbot/raspberry/visp`.
+
+Run first this test on the Raspberry Pi with `--help` option:
+
+    $ cd /home/pi/visp-ws/visp/robot/mbot/raspberry/visp
+    $ ./test-serial-mbot --help
+    Usage: 
+    ./test-serial-mbot --vx <linear velocity in m/s> --wz <rotational velocity in deg/s> --rpm_l <motor left RPM> --rpm_r <motor right RPM> --t <duration of the command in second> --help
+
+    Example:
+    ./test-serial-mbot --vx 0.05 --wz 0 --t 4
+
+You can now try to send a linear velocity of 5 cm/s during 4 sec to the robot using:
+
+    $ ./test-serial-mbot --vx 0.05 --wz 0 --t 4
+ 
 \section mbot_pi_vs Visual-servoing 
 \subsection mbot_pi_ibvs Image-based visual-servoing
 

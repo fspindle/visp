@@ -13,9 +13,9 @@ ser = serial.Serial(
 )
           
 while True:
-  data = ser.readline()
+  data = ser.read(9)
   if len(data) > 0:
-    print 'Got:', len(data), ' data:', data
+    print 'Got:', len(data), 'data:', data
 
   time.sleep(0.5)
   print 'not blocked'

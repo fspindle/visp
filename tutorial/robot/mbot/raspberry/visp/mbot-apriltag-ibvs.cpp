@@ -3,6 +3,7 @@
 #include <visp3/core/vpXmlParserCamera.h>
 #include <visp3/core/vpMomentObject.h>
 #include <visp3/core/vpPoint.h>
+#include <visp3/core/vpMomentBasic.h>
 #include <visp3/core/vpMomentGravityCenter.h>
 #include <visp3/core/vpMomentDatabase.h>
 #include <visp3/core/vpMomentCentered.h>
@@ -92,12 +93,12 @@ int main(int argc, const char **argv)
   try {
     vpImage<unsigned char> I;
 
-    vpV4l2Grabber grabber;
+    vpV4l2Grabber g;
     std::ostringstream device_name;
     device_name << "/dev/video" << device;
-    grabber.setDevice(device_name.str());
-    grabber.setScale(1);
-    grabber.acquire(I);
+    g.setDevice(device_name.str());
+    g.setScale(1);
+    g.acquire(I);
 
     vpDisplay *d = NULL;
     vpImage<vpRGBa> O;
@@ -133,7 +134,7 @@ int main(int argc, const char **argv)
 
     vpUnicycle robot;
     task.setServo(vpServo::EYEINHAND_L_cVe_eJe);
-    task.setInteractionMatrixType(vpServo::DESIRED, vpServo::PSEUDO_INVERSE);
+    task.setInteractionMatrixType(vpServo::DESIRED);
     task.setLambda(lambda);
     vpRotationMatrix cRe;
     cRe[0][0] = 0; cRe[0][1] = -1; cRe[0][2] =  0;
@@ -152,40 +153,45 @@ int main(int argc, const char **argv)
     // Desired distance to the target
     double Z_d = 0.3;
 
-    double X[4] = {-tagSize/2.,  tagSize/2., tagSize/2., -tagSize/2.};
-    double Y[4] = {-tagSize/2., -tagSize/2., tagSize/2.,  tagSize/2.};
+    // Define the desired polygon corresponding the the AprilTag CLOCKWISE
+    double X[4] = {tagSize/2.,  tagSize/2., -tagSize/2., -tagSize/2.};
+    double Y[4] = {tagSize/2., -tagSize/2., -tagSize/2.,  tagSize/2.};
     std::vector<vpPoint> vec_P, vec_P_d;
-    double m_a_d = 0;
+
     for (int i = 0; i < 4; i++) {
       vpPoint P_d(X[i], Y[i], 0);
       vpHomogeneousMatrix cdMo(0, 0, Z_d, 0, 0, 0);
       P_d.track(cdMo); //
       vec_P_d.push_back(P_d);
-
-      // Compute moment area a at desired position: m_a_d
-      m_a_d += vpMath::sqr(P_d.get_x()) + vpMath::sqr(P_d.get_y());
     }
 
     vpMomentObject m_obj(3), m_obj_d(3);
     vpMomentDatabase mdb, mdb_d;
-    vpMomentGravityCenter g, g_d;
+    vpMomentBasic mb_d;                                // Here only to get the desired area m00
+    vpMomentGravityCenter mg, mg_d;
     vpMomentCentered mc, mc_d;
-    vpMomentAreaNormalized an(m_a_d, Z_d), an_d(m_a_d, Z_d); // Declare normalized surface
-    vpMomentGravityCenterNormalized gn, gn_d;                // Declare normalized gravity center
+    vpMomentAreaNormalized man(0, Z_d), man_d(0, Z_d); // Declare normalized area. Desired area parameter will be updated below with m00
+    vpMomentGravityCenterNormalized mgn, mgn_d;        // Declare normalized gravity center
 
     // Desired moments
-    m_obj_d.setType(vpMomentObject::DISCRETE); // Discrete mode for object
-    m_obj_d.fromVector(vec_P_d);                // Initialize the object with the points coordinates
+    m_obj_d.setType(vpMomentObject::DENSE_POLYGON); // Consider the AprilTag as a polygon
+    m_obj_d.fromVector(vec_P_d);                    // Initialize the object with the points coordinates
 
-    g_d.linkTo(mdb_d);        // Add gravity center to database
+    mb_d.linkTo(mdb_d);       // Add basic moments to database
+    mg_d.linkTo(mdb_d);       // Add gravity center to database
     mc_d.linkTo(mdb_d);       // Add centered moments to database
-    an_d.linkTo(mdb_d);       // Add area normalized to database
-    gn_d.linkTo(mdb_d);       // Add gravity center normalized to database
+    man_d.linkTo(mdb_d);      // Add area normalized to database
+    mgn_d.linkTo(mdb_d);      // Add gravity center normalized to database
     mdb_d.updateAll(m_obj_d); // All of the moments must be updated, not just an_d
-    g_d.compute();            // Compute gravity center moment
+    mg_d.compute();           // Compute gravity center moment
     mc_d.compute();           // Compute centered moments AFTER gravity center
-    an_d.compute();           // Compute area normalized moment AFTER centered moments
-    gn_d.compute();           // Compute gravity center normalized moment AFTER area normalized moment
+
+    double m00 = mb_d.get(0, 0);
+    // Update an moment with the desired surface corresponding to m00
+    man_d.setDesiredSurface(m00);
+
+    man_d.compute();          // Compute area normalized moment AFTER centered moments
+    mgn_d.compute();          // Compute gravity center normalized moment AFTER area normalized moment
 
     // Desired plane
     double A = 0.0;
@@ -193,25 +199,23 @@ int main(int argc, const char **argv)
     double C = 1.0 / Z_d;
 
     // Construct area normalized features
-    vpFeatureMomentGravityCenterNormalized s_gn(mdb, A, B, C), s_gn_d(mdb_d, A, B, C);
-    vpFeatureMomentAreaNormalized s_an(mdb, A, B, C), s_an_d(mdb_d, A, B, C);
+    vpFeatureMomentGravityCenterNormalized s_mgn(mdb, A, B, C), s_mgn_d(mdb_d, A, B, C);
+    vpFeatureMomentAreaNormalized s_man(mdb, A, B, C), s_man_d(mdb_d, A, B, C);
 
     // Add the features
-    task.addFeature(s_gn, s_gn_d, vpFeatureMomentGravityCenterNormalized::selectXn());
-    task.addFeature(s_an, s_an_d);
+    task.addFeature(s_mgn, s_mgn_d, vpFeatureMomentGravityCenterNormalized::selectXn());
+    task.addFeature(s_man, s_man_d);
 
     // Update desired gravity center normalized feature
-    s_gn_d.update(A, B, C);
-    s_gn_d.compute_interaction();
+    s_mgn_d.update(A, B, C);
+    s_mgn_d.compute_interaction();
     // Update desired area normalized feature
-    s_an_d.update(A, B, C);
-    s_an_d.compute_interaction();
-
-    vpColVector v; // vz, wx
+    s_man_d.update(A, B, C);
+    s_man_d.compute_interaction();
 
     std::vector<double> time_vec;
     for (;;) {
-      grabber.acquire(I);
+      g.acquire(I);
 
       vpDisplay::display(I);
 
@@ -248,29 +252,29 @@ int main(int argc, const char **argv)
         vpDisplay::displayLine(I, 0, cam.get_u0(), I.getHeight()-1, cam.get_u0(), vpColor::red, 3); // Vertical line as desired x position
 
         // Current moments
-        m_obj.setType(vpMomentObject::DISCRETE); // Discrete mode for object
-        m_obj.fromVector(vec_P); // initialize the object with the points coordinates
+        m_obj.setType(vpMomentObject::DENSE_POLYGON); // Consider the AprilTag as a polygon
+        m_obj.fromVector(vec_P);                      // Initialize the object with the points coordinates
 
-        g.linkTo(mdb);        // Add gravity center to database
+        mg.linkTo(mdb);        // Add gravity center to database
         mc.linkTo(mdb);       // Add centered moments to database
-        an.linkTo(mdb);       // Add area normalized to database
-        gn.linkTo(mdb);       // Add gravity center normalized to database
+        man.linkTo(mdb);       // Add area normalized to database
+        mgn.linkTo(mdb);       // Add gravity center normalized to database
         mdb.updateAll(m_obj); // All of the moments must be updated, not just an_d
-        g.compute();          // Compute gravity center moment
+        mg.compute();          // Compute gravity center moment
         mc.compute();         // Compute centered moments AFTER gravity center
-        an.compute();         // Compute area normalized moment AFTER centered moment
-        gn.compute();         // Compute gravity center normalized moment AFTER area normalized moment
+        man.compute();         // Compute area normalized moment AFTER centered moment
+        mgn.compute();         // Compute gravity center normalized moment AFTER area normalized moment
 
-        s_gn.update(A, B, C);
-        s_gn.compute_interaction();
-        s_an.update(A, B, C);
-        s_an.compute_interaction();
+        s_mgn.update(A, B, C);
+        s_mgn.compute_interaction();
+        s_man.update(A, B, C);
+        s_man.compute_interaction();
 
         task.set_cVe(cVe);
         task.set_eJe(eJe);
 
         // Compute the control law. Velocities are computed in the mobile robot reference frame
-        v = task.computeControlLaw();
+        vpColVector v = task.computeControlLaw();
 
         std::cout << "Send velocity to the mbot: " << v[0] << " m/s " << vpMath::deg(v[1]) << " deg/s" << std::endl;
 

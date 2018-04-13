@@ -172,8 +172,6 @@ int main(int argc, const char **argv)
     // Add the feature
     task.addFeature(s_Z, s_Z_d);
 
-    vpColVector v; // vz, wx
-
     std::vector<double> time_vec;
     for (;;) {
       g.acquire(I);
@@ -233,7 +231,7 @@ int main(int argc, const char **argv)
         task.set_eJe(eJe);
 
         // Compute the control law. Velocities are computed in the mobile robot reference frame
-        v = task.computeControlLaw();
+        vpColVector v = task.computeControlLaw();
 
         std::cout << "Send velocity to the mbot: " << v[0] << " m/s " << vpMath::deg(v[1]) << " deg/s" << std::endl;
 

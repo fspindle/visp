@@ -11,6 +11,6 @@ ser = serial.Serial(
   timeout=0
 )
 
-x = ser.write('hello\n')
+x = ser.write('hello')
 ser.close()
 

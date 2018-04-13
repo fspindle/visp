@@ -5,7 +5,6 @@
 #include <visp3/gui/vpDisplayX.h>
 #include <visp3/sensor/vpV4l2Grabber.h>
 #include <visp3/io/vpImageIo.h>
-#include <visp3/visual_features/vpFeatureDepth.h>
 #include <visp3/visual_features/vpFeaturePoint3D.h>
 #include <visp3/vs/vpServo.h>
 #include <visp3/robot/vpUnicycle.h>
@@ -146,20 +145,16 @@ int main(int argc, const char **argv)
     double X = 0, Y = 0, Z = Z_d;
 
     // Create X_3D visual features
-    vpFeaturePoint3D s_X, s_X_d;
-    s_X.buildFrom(0, 0, Z_d);
-    s_X_d.buildFrom(0, 0, Z_d);
+    vpFeaturePoint3D s_XZ, s_XZ_d;
+    s_XZ.buildFrom(0, 0, Z_d);
+    s_XZ_d.buildFrom(0, 0, Z_d);
 
-    // Create log(Z/Z*) visual features
-    vpFeatureDepth s_Z, s_Z_d;
-    s_Z.buildFrom(X / Z, Y / Z, Z, 0); // log(Z/Z*) = 0 that's why the last parameter is 0
-    s_Z_d.buildFrom(0, 0, Z_d, 0);     // The value of s* is 0 with Z=Z_d meter
+    // Create Point 3D X, Z coordinates visual features
+    s_XZ.buildFrom(X / Z, Y / Z, Z, 0); // log(Z/Z*) = 0 that's why the last parameter is 0
+    s_XZ_d.buildFrom(0, 0, Z_d, 0);     // The value of s* is 0 with Z=Z_d meter
 
     // Add the features
-    task.addFeature(s_X, s_X_d, vpFeaturePoint3D::selectX());
-    task.addFeature(s_Z, s_Z_d);
-
-    vpColVector v; // vz, wx
+    task.addFeature(s_XZ, s_XZ_d, vpFeaturePoint3D::selectX() | vpFeaturePoint3D::selectZ());
 
     std::vector<double> time_vec;
     for (;;) {
@@ -192,11 +187,8 @@ int main(int argc, const char **argv)
         double Y = cMo_vec[0][1][3];
         double Z = cMo_vec[0][2][3];
 
-        // Update X_3D feature
+        // Update Point 3D feature
         s_X.set_XYZ(X, Y, Z);
-
-        // Update log(Z/Z*) feature
-        s_Z.buildFrom(X / Z, Y / Z, Z, log(Z / Z_d));
 
         std::cout << "X: " << X << " Z: " << Z << std::endl;
 
@@ -204,7 +196,7 @@ int main(int argc, const char **argv)
         task.set_eJe(eJe);
 
         // Compute the control law. Velocities are computed in the mobile robot reference frame
-        v = task.computeControlLaw();
+        vpColVector v = task.computeControlLaw();
 
         std::cout << "Send velocity to the mbot: " << v[0] << " m/s " << vpMath::deg(v[1]) << " deg/s" << std::endl;
 
