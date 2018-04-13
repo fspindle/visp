@@ -100,6 +100,7 @@ int main(int argc, const char **argv)
     grabber.acquire(I);
 
     vpDisplay *d = NULL;
+    vpImage<vpRGBa> O;
 #ifdef VISP_HAVE_X11
     if (display_on) {
       d = new vpDisplayX(I);
@@ -306,7 +307,6 @@ int main(int argc, const char **argv)
       vpDisplay::flush(I);
 
       if (display_on && save_image) {
-        vpImage<vpRGBa> O;
         vpDisplay::getImage(I, O);
         vpImageIo::write(O, "image.png");
       }
