@@ -186,9 +186,13 @@ int main(int argc, const char **argv)
     mg_d.compute();           // Compute gravity center moment
     mc_d.compute();           // Compute centered moments AFTER gravity center
 
-    double m00 = mb_d.get(0, 0);
-    // Update an moment with the desired surface corresponding to m00
-    man_d.setDesiredSurface(m00);
+    double area = 0;
+    if (m_obj_d.getType() == vpMomentObject::DISCRETE)
+      area = mb_d.get(2, 0) + mb_d.get(0, 2);
+    else
+      area = mb_d.get(0, 0);
+    // Update an moment with the desired area
+    man_d.setDesiredArea(area);
 
     man_d.compute();          // Compute area normalized moment AFTER centered moments
     mgn_d.compute();          // Compute gravity center normalized moment AFTER area normalized moment
