@@ -11,6 +11,7 @@ find_package(VISP REQUIRED visp_core visp_detection visp_io visp_gui visp_sensor
 
 set(tutorial_cpp
   mbot-apriltag-ibvs.cpp
+  mbot-apriltag-pbvs.cpp
   mbot-apriltag-2D-half-vs.cpp
   test-serial-mbot.cpp
 )

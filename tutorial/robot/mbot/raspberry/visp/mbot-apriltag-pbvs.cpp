@@ -1,20 +1,14 @@
-//! \example mbot-apriltag-ibvs.cpp.cpp
-#include <visp3/core/vpSerial.h>
+//! \example mbot-apriltag-2D-half-vs.cpp.cpp
 #include <visp3/core/vpXmlParserCamera.h>
-#include <visp3/core/vpMomentObject.h>
-#include <visp3/core/vpPoint.h>
-#include <visp3/core/vpMomentGravityCenter.h>
-#include <visp3/core/vpMomentDatabase.h>
-#include <visp3/core/vpMomentCentered.h>
-#include <visp3/core/vpMomentAreaNormalized.h>
-#include <visp3/core/vpMomentGravityCenterNormalized.h>
+#include <visp3/core/vpSerial.h>
 #include <visp3/detection/vpDetectorAprilTag.h>
 #include <visp3/gui/vpDisplayGDI.h>
 #include <visp3/gui/vpDisplayX.h>
 #include <visp3/sensor/vpV4l2Grabber.h>
 #include <visp3/io/vpImageIo.h>
-#include <visp3/visual_features/vpFeatureMomentAreaNormalized.h>
-#include <visp3/visual_features/vpFeatureMomentGravityCenterNormalized.h>
+#include <visp3/visual_features/vpFeatureBuilder.h>
+#include <visp3/visual_features/vpFeatureDepth.h>
+#include <visp3/visual_features/vpFeaturePoint.h>
 #include <visp3/vs/vpServo.h>
 #include <visp3/robot/vpUnicycle.h>
 
@@ -23,6 +17,7 @@ int main(int argc, const char **argv)
 #if defined(VISP_HAVE_APRILTAG) && defined(VISP_HAVE_V4L2)
   int device = 0;
   vpDetectorAprilTag::vpAprilTagFamily tagFamily = vpDetectorAprilTag::TAG_36h11;
+  vpDetectorAprilTag::vpPoseEstimationMethod poseEstimationMethod = vpDetectorAprilTag::HOMOGRAPHY_VIRTUAL_VS;
   double tagSize = 0.065;
   float quad_decimate = 4.0;
   int nThreads = 2;
@@ -31,9 +26,12 @@ int main(int argc, const char **argv)
   bool display_tag = false;
   bool display_on = false;
   bool serial_off = false;
+  bool use_pose = false;
 
   for (int i = 1; i < argc; i++) {
-    if (std::string(argv[i]) == "--tag_size" && i + 1 < argc) {
+    if (std::string(argv[i]) == "--use_pose") {
+      use_pose = true;
+    } else if (std::string(argv[i]) == "--tag_size" && i + 1 < argc) {
       tagSize = std::atof(argv[i + 1]);
     } else if (std::string(argv[i]) == "--input" && i + 1 < argc) {
       device = std::atoi(argv[i + 1]);
@@ -53,18 +51,17 @@ int main(int argc, const char **argv)
 #endif
     } else if (std::string(argv[i]) == "--serial_off") {
       serial_off = true;
-    } else if (std::string(argv[i]) == "--tag_family" && i + 1 < argc) {
-      tagFamily = (vpDetectorAprilTag::vpAprilTagFamily)std::atoi(argv[i + 1]);
+   } else if (std::string(argv[i]) == "--tag_family" && i + 1 < argc) {
+      tagFamily = (vpDetectorAprilTag::vpAprilTagFamily)atoi(argv[i + 1]);
     } else if (std::string(argv[i]) == "--help" || std::string(argv[i]) == "-h") {
       std::cout << "Usage: " << argv[0]
                 << " [--input <camera input>] [--tag_size <tag_size in m>]"
                    " [--quad_decimate <quad_decimate>] [--nthreads <nb>]"
-                   " [--intrinsic <intrinsic file>] [--camera_name <camera name>]"
-                   " [--tag_family <family> (0: TAG_36h11, 1: TAG_36h10, 2: "
-                   "TAG_36ARTOOLKIT,"
+                   " [--intrinsic <intrinsic file>] [--camera_name <camera name>] [--use_pose]"
+                   " [--tag_family <family> (0: TAG_36h11, 1: TAG_36h10, 2: TAG_36ARTOOLKIT,"
                    " 3: TAG_25h9, 4: TAG_25h7, 5: TAG_16h5)]"
                    " [--display_tag]";
-#if (defined(VISP_HAVE_X11) || defined(VISP_HAVE_GDI))
+#if defined(VISP_HAVE_X11) || defined(VISP_HAVE_GDI)
       std::cout << " [--display_on]";
 #endif
       std::cout << " [--serial_off] [--help]" << std::endl;
@@ -89,12 +86,12 @@ int main(int argc, const char **argv)
   try {
     vpImage<unsigned char> I;
 
-    vpV4l2Grabber grabber;
+    vpV4l2Grabber g;
     std::ostringstream device_name;
     device_name << "/dev/video" << device;
-    grabber.setDevice(device_name.str());
-    grabber.setScale(1);
-    grabber.acquire(I);
+    g.setDevice(device_name.str());
+    g.setScale(1);
+    g.acquire(I);
 
     vpDisplay *d = NULL;
     if (display_on) {
@@ -113,12 +110,14 @@ int main(int argc, const char **argv)
       parser.parse(cam, intrinsic_file, camera_name, vpCameraParameters::perspectiveProjWithoutDistortion);
   #endif
     std::cout << "cam:\n" << cam << std::endl;
+    std::cout << "use pose: " << use_pose << std::endl;
     std::cout << "tagFamily: " << tagFamily << std::endl;
-    std::cout << "tagSize: " << tagSize << std::endl;
 
     vpDetectorAprilTag detector(tagFamily);
 
     detector.setAprilTagQuadDecimate(quad_decimate);
+    if (use_pose)
+      detector.setAprilTagPoseEstimationMethod(poseEstimationMethod);
     detector.setAprilTagNbThreads(nThreads);
     detector.setDisplayTag(display_tag);
 
@@ -131,7 +130,7 @@ int main(int argc, const char **argv)
 
     vpUnicycle robot;
     task.setServo(vpServo::EYEINHAND_L_cVe_eJe);
-    task.setInteractionMatrixType(vpServo::DESIRED, vpServo::PSEUDO_INVERSE);
+    task.setInteractionMatrixType(vpServo::CURRENT, vpServo::PSEUDO_INVERSE);
     task.setLambda(lambda);
     vpRotationMatrix cRe;
     cRe[0][0] = 0; cRe[0][1] = -1; cRe[0][2] =  0;
@@ -147,75 +146,46 @@ int main(int argc, const char **argv)
 
     std::cout << "eJe: \n" << eJe << std::endl;
 
-    // Desired distance to the target
-    double Z_d = 0.3;
+    // Current and desired visual feature associated to the x coordinate of the point
+    vpFeaturePoint s_x, s_xd;
+    vpImagePoint cog;
+    double Z, Zd;
+    Z = Zd = 0.3;
 
-    double X[4] = {-tagSize/2.,  tagSize/2., tagSize/2., -tagSize/2.};
-    double Y[4] = {-tagSize/2., -tagSize/2., tagSize/2.,  tagSize/2.};
-    std::vector<vpPoint> vec_P, vec_Pd;
-    double m_a_d = 0;
-    for (int i = 0; i < 4; i++) {
-      vpPoint Pd(X[i], Y[i], 0);
-      vpHomogeneousMatrix cdMo(0, 0, Zd, 0, 0, 0);
-      Pd.track(cdMo); //
-      vec_Pd.push_back(Pd);
+    // Create the current x visual feature
+    vpFeatureBuilder::create(s_x, cam, cog);
 
-      // Compute moment area a at desired position: m_a_d
-      m_a_d += vpMath::sqr(Pd.get_x()) + vpMath::sqr(Pd.get_y());
-    }
+    // Create the desired x* visual feature
+    s_xd.buildFrom(0, 0, Zd);
 
-    vpMomentObject m_obj(3), m_obj_d(3);
-    vpMomentDatabase mdb, mdb_d;
-    vpMomentGravityCenter g, g_d;
-    vpMomentCentered mc, mc_d;
-    vpMomentAreaNormalized an(m_a_d, Zd), an_d(m_a_d, Z_d); // Declare normalized surface
-    vpMomentGravityCenterNormalized gn(), gn_d();                 // Declare normalized gravity center
+    // Add the point feature
+    task.addFeature(s_x, s_xd, vpFeaturePoint::selectX());
 
-    // Desired moments
-    m_obj_d.setType(vpMomentObject::DISCRETE); // Discrete mode for object
-    m_obj_d.fromVector(vec_Pd); // initialize the object with the points coordinates
+    // Create the current log(Z/Z*) visual feature
+    vpFeatureDepth s_Z, s_Zd;
 
-    g_d.linkTo(mdb_d);        // Add gravity center to database
-    mc_d.linkTo(mdb_d);       // Add centered moments to database
-    an_d.linkTo(mdb_d);       // Add area normalized to database
-    gn_d.linkTo(mdb_d);       // Add gravity center normalized to database
-    mdb_d.updateAll(m_obj_d); // All of the moments must be updated, not just an_d
-    g_d.compute();            // Compute gravity center moment
-    mc_d.compute();           // Compute centered moments AFTER gravity center
-    an_d.compute();           // Compute area normalized moment AFTER centered moments
-    gn_d.compute();           // Compute gravity center normalized moment AFTER area normalized moment
+    std::cout << "Z " << Z << std::endl;
+    s_Z.buildFrom(s_x.get_x(), s_x.get_y(), Z, 0); // log(Z/Z*) = 0 that's why the last parameter is 0
+    s_Zd.buildFrom(0, 0, Zd, 0); // The value of s* is 0 with Z=1 meter
 
-    // Desired plane
-    double A = 0.0;
-    double B = 0.0;
-    double C = 1.0 / Z_d;
-
-    // Construct area normalized features
-    vpFeatureMomentGravityCenterNormalized s_gn(mdb, A, B, C), s_gn_d(mdb_d, A, B, C);
-    vpFeatureMomentAreaNormalized s_an(mdb, A, B, C), s_an_d(mdb_d, A, B, C);
-
-    // Add the features
-    task.addFeature(s_gn, s_gn_d);
-    task.addFeature(s_an, s_an_d);
-
-    // Update desired gravity center normalized feature
-    s_gn_d.update(A, B, C);
-    s_gn_d.compute_interaction();
-    // Update desired area normalized feature
-    s_an_d.update(A, B, C);
-    s_an_d.compute_interaction();
+    // Add the feature
+    task.addFeature(s_Z, s_Zd);
 
     vpColVector v; // vz, wx
 
     std::vector<double> time_vec;
     for (;;) {
-      grabber.acquire(I);
+      g.acquire(I);
 
       vpDisplay::display(I);
 
       double t = vpTime::measureTimeMs();
       std::vector<vpHomogeneousMatrix> cMo_vec;
-      detector.detect(I, tagSize, cam, cMo_vec);
+      if (use_pose)
+        detector.detect(I, tagSize, cam, cMo_vec);
+      else
+        detector.detect(I);
+
       t = vpTime::measureTimeMs() - t;
       time_vec.push_back(t);
 
@@ -223,41 +193,39 @@ int main(int argc, const char **argv)
       ss << "Detection time: " << t << " ms for " << detector.getNbObjects() << " tags";
       vpDisplay::displayText(I, 40, 20, ss.str(), vpColor::red);
 
+      //! [Display camera pose for each tag]
+      if (use_pose) {
+        for (size_t i = 0; i < cMo_vec.size(); i++) {
+          vpDisplay::displayFrame(I, cMo_vec[i], cam, tagSize / 2, vpColor::none, 3);
+        }
+      }
+      //! [Display camera pose for each tag]
+
       if (detector.getNbObjects() == 1) {
         if (! serial_off) {
 //        serial->write("LED_RING=2,0,10,0\n"); // Switch on led 2 to green: tag detected
         }
 
-        // Update current points used to compute the moments
-        std::vector< vpImagePoint > vec_ip = detector.getPolygon(0);
-        vec_P.clear();
-        for (size_t i = 0; i < vec_ip.size(); i++) { // size = 4
-          double x = 0, y = 0;
-          vpPixelMeterConversion::convertPoint(cam, vec_ip[i], x, y);
-          vpPoint P;
-          P.set_x(x);
-          P.set_y(y);
-          vec_P.push_back(P);
+        if (use_pose) {
+          Z = cMo_vec[0][2][3];
+        }
+        else {
+          vpPolygon polygon(detector.getPolygon(0));
+          double surface = polygon.getArea();
+          std::cout << "Surface: " << surface << std::endl;
+
+          // Compute the distance from target surface and 3D size
+          Z = tagSize * cam.get_px() / sqrt(surface);
         }
 
-        // Current moments
-        m_obj.setType(vpMomentObject::DISCRETE); // Discrete mode for object
-        m_obj.fromVector(vec_P); // initialize the object with the points coordinates
+        vpFeatureBuilder::create(s_x, cam, detector.getCog(0));
+        s_x.set_Z(Z);
 
-        g.linkTo(mdb);        // Add gravity center to database
-        mc.linkTo(mdb);       // Add centered moments to database
-        an.linkTo(mdb);       // Add area normalized to database
-        gn.linkTo(mdb);       // Add gravity center normalized to database
-        mdb.updateAll(m_obj); // All of the moments must be updated, not just an_d
-        g.compute();          // Compute gravity center moment
-        mc.compute();         // Compute centered moments AFTER gravity center
-        an.compute();         // Compute area normalized moment AFTER centered moment
-        gn.compute();         // Compute gravity center normalized moment AFTER area normalized moment
+        // Update log(Z/Z*) feature. Since the depth Z change, we need to update
+        // the intection matrix
+        s_Z.buildFrom(s_x.get_x(), s_x.get_y(), Z, log(Z / Zd));
 
-        s_gn.update(A, B, C);
-        s_gn.compute_interaction();
-        s_an.update(A, B, C);
-        s_an.compute_interaction();
+        std::cout << "cog: " << detector.getCog(0) << " Z: " << Z << std::endl;
 
         task.set_cVe(cVe);
         task.set_eJe(eJe);
