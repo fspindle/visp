@@ -238,6 +238,11 @@ int main(int argc, const char **argv)
           vec_P.push_back(P);
         }
 
+        // Display visual features
+        vpDisplay::displayPolygon(I, vec_ip, vpColor::green, 3); // Current polygon used to compure an moment
+        vpDisplay::displayCross(I, detector.getCog(0), 15, vpColor::green, 3); // Current polygon used to compure an moment
+        vpDisplay::displayLine(I, 0, cam.get_u0(), I.getHeight()-1, cam.get_u0(), vpColor::red, 3); // Vertical line as desired x position
+
         // Current moments
         m_obj.setType(vpMomentObject::DISCRETE); // Discrete mode for object
         m_obj.fromVector(vec_P); // initialize the object with the points coordinates
