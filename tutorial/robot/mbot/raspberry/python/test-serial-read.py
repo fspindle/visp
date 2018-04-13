@@ -13,7 +13,7 @@ ser = serial.Serial(
 )
           
 while True:
-  data = ser.read(9999)
+  data = ser.readline()
   if len(data) > 0:
     print 'Got:', len(data), ' data:', data
 

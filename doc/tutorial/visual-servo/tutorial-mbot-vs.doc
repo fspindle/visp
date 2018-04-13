@@ -16,7 +16,7 @@ The following material is requested:
 - Raspberry Pi <a href="https://www.raspberrypi.org/products/camera-module-v2/">camera module V2</a>
 - an AprilTag that will serve as target for the visual servoing. \ref franka_prereq_target. 
 
-The communication between Raspberry Pi and mBot Auriga board is achieved via a serial link. Images acquired on the Raspberry Pi are processed in order to detect the AprilTag pose. From this pose a visual-servoing computes the velocities that have to be send to the Me Auriga. On the Me Auriga there is an infinite loop that is waiting for velocities that have to be applied to the Dashing Raptor wheels. A watch dog ensure the mobile robot stops when nothing is sent throw the serial link after 1 second.
+The communication between Raspberry Pi and mBot Auriga board is achieved via a [serial link](http://learn.makeblock.com/me-shield-for-raspberry-pi/). Images acquired on the Raspberry Pi are processed in order to detect the AprilTag pose. From this pose a visual-servoing computes the velocities that have to be send to the Me Auriga. On the Me Auriga there is an infinite loop that is waiting for velocities that have to be applied to the Dashing Raptor wheels. A watch dog ensure the mobile robot stops when nothing is sent throw the serial link after 1 second.
 
 \note Before continuing we recommend that you succeed to follow \ref tutorial-install-raspberry and \ref tutorial-detection-apriltag.
 
@@ -207,14 +207,15 @@ This could be achieved following this [tutorial](https://projects.raspberrypi.or
 
 \subsection mbot_rpi_test_serial Test serial port on RPi
 
-Here we use Raspberry Pi 3, a RS232/TTL 3-5,5V adapter and a home made adapter that is used to connect the RS232/TTL 3-5,5V adapter to the Raspberry Pi GPIO connector. The home made adapter connects Raspberry PI GPIO pins 6 (GND), 8 (TX), 10 (RX) to a RS232 DB9 female connector.
+Here we use Raspberry Pi 3, a RS232/TTL 3-5,5V adapter and a home made adapter that is used to connect the RS232/TTL 3-5,5V adapter to the Raspberry Pi [GPIO connector](http://pi4j.com/images/j8header-3b.png). The home made adapter connects Raspberry PI GPIO pins 6 (GND), 8 (TxD UART), 10 (RxD UART) to a RS232 DB9 female connector.
+\image html img-mbot-shield-wiring.jpg
 
 ~~~
-GPIO        | DB9 female
-------------------------
-pin 6 (GND) | pin 5
-pin 8 (TX)  | pin (RX)
-pin 10 (RX) | pin (TX)
+RPi GPIO                  | Me Shield | DB9 female  | Color
+------------------------------------------------------------
+pin  6 GND                | pin 2     | pin 5       | black
+pin  8 GPIO 15 (TxD UART) | pin 8     | pin 2 (RxD) | yellow
+pin 10 GPIO 16 (RxD UART) | pin 10    | pin 3 (TxD) | orange
 ~~~
 
 Now we can use two python files, `test-serial-write.py` who writes something on the `/dev/ttyAMA0` port and the `test-serial-read.py` that reads on a laptop running Ubuntu 16.04 on `/dev/ttyUSB0` port.

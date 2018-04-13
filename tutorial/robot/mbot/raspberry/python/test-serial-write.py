@@ -3,7 +3,6 @@
 # This test has to run on a laptop connected throw a USB
 # to serial adapter to a Raspberry Pi.
 
-import time
 import serial
 
 ser = serial.Serial(         
@@ -12,6 +11,6 @@ ser = serial.Serial(
   timeout=0
 )
 
-x = ser.write('hello')
+x = ser.write('hello\n')
 ser.close()
 
