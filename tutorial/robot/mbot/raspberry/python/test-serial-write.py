@@ -7,8 +7,9 @@ import time
 import serial
 
 ser = serial.Serial(         
-  port='/dev/ttyUSB0',
+  port='/dev/ttyAMA0',
   baudrate = 9600,
+  timeout=0
 )
 
 x = ser.write('hello')

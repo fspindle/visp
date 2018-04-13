@@ -226,6 +226,7 @@ To get these files use Subversion (even if code is handled with git):
 
 After plugging the ME Shield to the Raspberry Pi and connecting the home made adapter to yo your laptop, you can test if you succeed to configure Raspberry Pi serial port, running on your laptop:
 
+    $ sudo chmod a+rw /dev/ttyUSB0
     $ python test-serial-read.py
 
 and on the Raspberry Pi
