@@ -306,7 +306,7 @@ int main(int argc, const char **argv)
       vpDisplay::flush(I);
 
       if (display_on && save_image) {
-        vpImage<RGBa> O;
+        vpImage<vpRGBa> O;
         vpDisplay::getImage(I, O);
         vpImageIo::write(O, "image.png");
       }
