@@ -217,7 +217,7 @@ pin 8 (TX)  | pin (RX)
 pin 10 (RX) | pin (TX)
 ~~~
 
-Now we can use two python files, `test-serial-write.py` who writes something on the `/dev/ttyAMA0` port and the `test-serial-read.py` that reads on a laptop `/dev/ttyUSB0` port.
+Now we can use two python files, `test-serial-write.py` who writes something on the `/dev/ttyAMA0` port and the `test-serial-read.py` that reads on a laptop running Ubuntu 16.04 on `/dev/ttyUSB0` port.
 
 To get these files use Subversion (even if code is handled with git):
 
@@ -241,23 +241,46 @@ To run this test on the Raspberry Pi:
     $ cd /home/pi/visp-ws/visp-build/tutorial/detection/tag
     $ ./tutorial-apriltag-detector-live
 
-\section mbot_pi_ibvs Image-based visual-servoing with Raspberry Pi
+\section mbot_pi_vs Visual-servoing 
+\subsection mbot_pi_ibvs Image-based visual-servoing
 
-The next step is now to run the image-based visual servoing example implemented in mbot-apriltag-ibvs.cpp. If you build ViSP from source as explained in \ref tutorial-install-raspberry the corresponding binary is available in `/home/pi/visp-ws/visp-build/tutorial/robot/mbot/raspberry/visp/`. Run `./mbot-apriltag-ibvs --help` to see which are the command line options available.
-
-    $ cd /home/pi/visp-ws/visp-build/tutorial/robot/mbot/raspberry/visp
-    $ ./mbot-apriltag-ibvs --display_on
-
-\section mbot_pi_2Dhalf_vs 2D-half visual-servoing with Raspberry Pi
-
-We provide also a 2D half visual servoing example implemented in mbot-apriltag-2D-half-vs.cpp. The corresponding binary is available in `/home/pi/visp-ws/visp-build/tutorial/robot/mbot/raspberry/visp/`. Run `./mbot-apriltag-2D-half-vs --help` to see which are the command line options available.
+The next step is now to run the image-based visual servoing example implemented in mbot-apriltag-ibvs.cpp. If you build ViSP from source as explained in \ref tutorial-install-raspberry the corresponding binary is available in `/home/pi/visp-ws/visp-build/tutorial/robot/mbot/raspberry/visp/`. 
 
     $ cd /home/pi/visp-ws/visp-build/tutorial/robot/mbot/raspberry/visp
-    $ ./mbot-apriltag-2D-half-vs --display_on
+    $ ./mbot-apriltag-ibvs
+
+Run `./mbot-apriltag-ibvs --help` to see which are the command line options available.
+Adding option `--display_on` allows to display images like the following that shows the result of the image processing and features that are used:
+\image html img-mbot-ibvs-features.png
+Since using this option could introduce a lag due to the network connection, we recommend to use it only for curiosity.
+
+\subsection mbot_pi_2Dhalf_vs 2D-half visual-servoing
+
+We provide also a 2D half visual servoing example implemented in mbot-apriltag-2D-half-vs.cpp. The corresponding binary is available in `/home/pi/visp-ws/visp-build/tutorial/robot/mbot/raspberry/visp/`. This example uses two image moments as visual features and especially
+the normalized gravity center along \f$ x \f$ axis implemented in vpFeatureMomentGravityCenterNormalized and the normalized area implemented in vpFeatureMomentAreaNormalized. The first one allows to control the orientation of the robot to maintain the target on a vertical line in the middle of the image, while the second feature allows to regulate the distance wrt the target.
+
+    $ cd /home/pi/visp-ws/visp-build/tutorial/robot/mbot/raspberry/visp
+    $ ./mbot-apriltag-2D-half-vs
+
+Run `./mbot-apriltag-2D-half-vs --help` to see which are the command line options available.
+Adding option `--display_on` allows to display images like the following that shows the result of the image processing and features that are used:
+\image html img-mbot-2D-half-vs-features.png
+Since using this option could introduce a lag due to the network connection, we recommend to use it only for curiosity.
+
+\subsection mbot_pi_pbvs Position-based visual-servoing
+
+We provide also a position-based visual servoing example implemented in mbot-apriltag-pbvs.cpp. The corresponding binary is available in `/home/pi/visp-ws/visp-build/tutorial/robot/mbot/raspberry/visp/`. This example uses a mix between 2D and 3D visual features and especially the 2D \f$ x \f$ coordinate of the target cog implemented in vpFeaturePoint and the depth feature implemented in vpFeatureDepth. The first one allows to control the orientation of the robot to maintain the target on a vertical line in the middle of the image, while the second feature allows to regulate the distance Z wrt the target.
+
+    $ cd /home/pi/visp-ws/visp-build/tutorial/robot/mbot/raspberry/visp
+    $ ./mbot-apriltag-pbvs
+
+Run `./mbot-apriltag-pbvs --help` to see which are the command line options available. Adding option `--display_on` allows to display images like the following that shows the result of the image processing and features that are used:
+\image html img-mbot-pbvs-features.png
+Since using this option could introduce a lag due to the network connection, we recommend to use it only for curiosity.
 
 \section mbot_pi_service Howto launch the demo once mBot powered on 
 
-It is possible to transform the `mbot-apriltag-2D-half-vs` demo into a service on the Raspberry Pi in order to start the binary when raspberry has booted. To this end, we need to install a daemon.
+It is possible to transform the `mbot-apriltag-2D-half-vs` demo into a service on the Raspberry Pi in order to start the binary when raspberry has booted. To this end, we need to install a daemon. This example uses a 3D visual features and especially the \f$ X \f$ 3D coordinate of the target 3D frame implemented in vpFeaturePoint3D and the depth feature implemented in vpFeatureDepth. The first one allows to control the orientation of the robot to maintain the target origin frame on a vertical line in the middle of the image, while the second feature allows to regulate the distance Z wrt the target.
 
 If you follow \ref tutorial-install-raspberry, there is already a daemon in `/home/pi/visp-ws/visp/tutorial/robot/mbot/raspberry/daemon`. You need to edit `visual-servo` file and adapt the location of the visual-servo binary location.
 

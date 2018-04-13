@@ -1,4 +1,4 @@
-//! \example mbot-apriltag-ibvs.cpp.cpp
+//! \example mbot-apriltag-ibvs.cpp
 #include <visp3/core/vpSerial.h>
 #include <visp3/core/vpXmlParserCamera.h>
 #include <visp3/core/vpMomentObject.h>

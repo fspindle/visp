@@ -1,4 +1,4 @@
-//! \example mbot-apriltag-2D-half-vs.cpp.cpp
+//! \example mbot-apriltag-2D-half-vs.cpp
 #include <visp3/core/vpXmlParserCamera.h>
 #include <visp3/core/vpSerial.h>
 #include <visp3/detection/vpDetectorAprilTag.h>

@@ -459,6 +459,6 @@ You are now ready to see the next \ref tutorial-getting-started that will show y
 
 You may also be interested in \ref tutorial-install-crosscompiling-raspberry if you want to speed up the build process or deploy ViSP on other Rapberry boards.
 
-There is also \ref tutorial-mbot-pbvs that uses a Raspberry Pi in order to control a mBot Ranger educational robot kit by visual-servoing.
+There is also \ref tutorial-mbot-vs that uses a Raspberry Pi in order to control a mBot Ranger educational robot kit by visual-servoing.
 
 */

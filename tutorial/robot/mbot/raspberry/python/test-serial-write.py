@@ -1,13 +1,13 @@
 #!/usr/bin/env python
 
-# Rapberry connected to a laptop
+# This test has to run on a laptop connected throw a USB
+# to serial adapter to a Raspberry Pi.
 
 import time
 import serial
 
-ser = serial.Serial(
-              
-  port='/dev/ttyAMA0',
+ser = serial.Serial(         
+  port='/dev/ttyUSB0',
   baudrate = 9600,
 )
 
