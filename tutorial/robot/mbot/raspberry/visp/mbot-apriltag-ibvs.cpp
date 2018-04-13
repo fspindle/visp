@@ -222,7 +222,7 @@ int main(int argc, const char **argv)
       time_vec.push_back(t);
 
       std::stringstream ss;
-      ss << "Detection time: " << t << " ms for " << detector.getNbObjects() << " tags";
+      ss << "Detection time: " << t << " ms";
       vpDisplay::displayText(I, 40, 20, ss.str(), vpColor::red);
 
       if (detector.getNbObjects() == 1) {
