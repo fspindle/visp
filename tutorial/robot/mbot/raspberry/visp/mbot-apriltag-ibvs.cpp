@@ -134,7 +134,7 @@ int main(int argc, const char **argv)
 
     vpUnicycle robot;
     task.setServo(vpServo::EYEINHAND_L_cVe_eJe);
-    task.setInteractionMatrixType(vpServo::DESIRED);
+    task.setInteractionMatrixType(vpServo::CURRENT);
     task.setLambda(lambda);
     vpRotationMatrix cRe;
     cRe[0][0] = 0; cRe[0][1] = -1; cRe[0][2] =  0;
