@@ -148,7 +148,7 @@ int main(int argc, const char **argv)
     // Create log(Z/Z*) visual feature
     vpFeatureDepth s_Z, s_Z_d;
     s_Z.buildFrom(s_x.get_x(), s_x.get_y(), Z, 0); // log(Z/Z*) = 0 that's why the last parameter is 0
-    s_Zd.buildFrom(0, 0, Z_d, 0); // The value of s* is 0 with Z=1 meter
+    s_Z_d.buildFrom(0, 0, Z_d, 0);                 // The value of s* is 0 with Z=Z_d meter
 
     // Add the features
     task.addFeature(s_X, s_X_d, vpFeaturePoint3D::selectX());
@@ -190,7 +190,7 @@ int main(int argc, const char **argv)
         s_X.set_XYZ(X, Y, Z);
 
         // Update log(Z/Z*) feature
-        s_Z.buildFrom(s_x.get_x(), s_x.get_y(), Z, log(Z / Z_d));
+        s_Z.buildFrom(X / Z, Y / Z, Z, log(Z / Z_d));
 
         std::cout << "X: " << X << " Z: " << Z << std::endl;
 
