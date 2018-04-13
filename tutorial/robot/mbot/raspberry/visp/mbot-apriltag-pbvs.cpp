@@ -139,16 +139,17 @@ int main(int argc, const char **argv)
 
     // Desired distance to the target
     double Z_d = 0.3;
+    double X = 0, Y = 0, Z = Z_d;
 
     // Create X_3D visual features
     vpFeaturePoint3D s_X, s_X_d;
     s_X.buildFrom(0, 0, Z_d);
     s_X_d.buildFrom(0, 0, Z_d);
 
-    // Create log(Z/Z*) visual feature
+    // Create log(Z/Z*) visual features
     vpFeatureDepth s_Z, s_Z_d;
-    s_Z.buildFrom(s_x.get_x(), s_x.get_y(), Z, 0); // log(Z/Z*) = 0 that's why the last parameter is 0
-    s_Z_d.buildFrom(0, 0, Z_d, 0);                 // The value of s* is 0 with Z=Z_d meter
+    s_Z.buildFrom(X / Z, Y / Z, Z, 0); // log(Z/Z*) = 0 that's why the last parameter is 0
+    s_Z_d.buildFrom(0, 0, Z_d, 0);     // The value of s* is 0 with Z=Z_d meter
 
     // Add the features
     task.addFeature(s_X, s_X_d, vpFeaturePoint3D::selectX());
