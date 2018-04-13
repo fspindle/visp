@@ -24,6 +24,7 @@ int main(int argc, const char **argv)
   bool display_tag = false;
   bool display_on = false;
   bool serial_off = false;
+  bool save_image = false; // Only possible if display_on = true
 
   for (int i = 1; i < argc; i++) {
     if (std::string(argv[i]) == "--tag_size" && i + 1 < argc) {
@@ -43,6 +44,8 @@ int main(int argc, const char **argv)
 #if defined(VISP_HAVE_X11)
     } else if (std::string(argv[i]) == "--display_on") {
       display_on = true;
+    } else if (std::string(argv[i]) == "--save_image") {
+      save_image = true;
 #endif
     } else if (std::string(argv[i]) == "--serial_off") {
       serial_off = true;
@@ -57,7 +60,7 @@ int main(int argc, const char **argv)
                    " 3: TAG_25h9, 4: TAG_25h7, 5: TAG_16h5)]"
                    " [--display_tag]";
 #if defined(VISP_HAVE_X11)
-      std::cout << " [--display_on]";
+      std::cout << " [--display_on] [--save_image]";
 #endif
       std::cout << " [--serial_off] [--help]" << std::endl;
       return EXIT_SUCCESS;
@@ -89,6 +92,7 @@ int main(int argc, const char **argv)
     g.acquire(I);
 
     vpDisplay *d = NULL;
+    vpImage<vpRGBa> O;
 #ifdef VISP_HAVE_X11
     if (display_on) {
       d = new vpDisplayX(I);
@@ -171,13 +175,14 @@ int main(int argc, const char **argv)
       time_vec.push_back(t);
 
       std::stringstream ss;
-      ss << "Detection time: " << t << " ms for " << detector.getNbObjects() << " tags";
+      ss << "Detection time: " << t << " ms";
       vpDisplay::displayText(I, 40, 20, ss.str(), vpColor::red);
 
       if (detector.getNbObjects() == 1) {
-        //! [Display camera pose]
+        // Display visual features
+        vpHomogeneousMatrix cdMo(0, 0, Z_d, 0, 0, 0);
         vpDisplay::displayFrame(I, cMo_vec[0], cam, tagSize / 2, vpColor::none, 3);
-        //! [Display camera pose]
+        vpDisplay::displayFrame(I, cdMo, cam, tagSize / 3, vpColor::red, 3);
 
         if (! serial_off) {
 //        serial->write("LED_RING=2,0,10,0\n"); // Switch on led 2 to green: tag detected
@@ -234,6 +239,10 @@ int main(int argc, const char **argv)
 
       vpDisplay::displayText(I, 20, 20, "Click to quit.", vpColor::red);
       vpDisplay::flush(I);
+      if (display_on && save_image) {
+        vpDisplay::getImage(I, O);
+        vpImageIo::write(O, "image.png");
+      }
       if (vpDisplay::getClick(I, false))
         break;
     }
