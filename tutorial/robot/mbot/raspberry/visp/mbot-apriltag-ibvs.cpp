@@ -47,7 +47,7 @@ int main(int argc, const char **argv)
       camera_name = std::string(argv[i + 1]);
     } else if (std::string(argv[i]) == "--display_tag") {
       display_tag = true;
-#if !defined(VISP_HAVE_X11)
+#if defined(VISP_HAVE_X11)
     } else if (std::string(argv[i]) == "--display_on") {
       display_on = true;
 #endif
@@ -97,19 +97,19 @@ int main(int argc, const char **argv)
     grabber.acquire(I);
 
     vpDisplay *d = NULL;
-    if (display_on) {
 #ifdef VISP_HAVE_X11
+    if (display_on) {
       d = new vpDisplayX(I);
-#endif
     }
+#endif
 
     vpCameraParameters cam;
     cam.initPersProjWithoutDistortion(615.1674805, 615.1675415, I.getWidth() / 2., I.getHeight() / 2.);
-  #ifdef VISP_HAVE_XML2
+#ifdef VISP_HAVE_XML2
     vpXmlParserCamera parser;
     if (!intrinsic_file.empty() && !camera_name.empty())
       parser.parse(cam, intrinsic_file, camera_name, vpCameraParameters::perspectiveProjWithoutDistortion);
-  #endif
+#endif
     std::cout << "cam:\n" << cam << std::endl;
     std::cout << "tagFamily: " << tagFamily << std::endl;
     std::cout << "tagSize: " << tagSize << std::endl;
@@ -193,7 +193,7 @@ int main(int argc, const char **argv)
     vpFeatureMomentAreaNormalized s_an(mdb, A, B, C), s_an_d(mdb_d, A, B, C);
 
     // Add the features
-    task.addFeature(s_gn, s_gn_d);
+    task.addFeature(s_gn, s_gn_d, vpFeatureMomentGravityCenterNormalized::selectXn());
     task.addFeature(s_an, s_an_d);
 
     // Update desired gravity center normalized feature
@@ -223,7 +223,7 @@ int main(int argc, const char **argv)
 
       if (detector.getNbObjects() == 1) {
         if (! serial_off) {
-//        serial->write("LED_RING=2,0,10,0\n"); // Switch on led 2 to green: tag detected
+          //        serial->write("LED_RING=2,0,10,0\n"); // Switch on led 2 to green: tag detected
         }
 
         // Update current points used to compute the moments
@@ -272,8 +272,8 @@ int main(int argc, const char **argv)
         double motor_right = ( v[0] - L * v[1]) / radius;
         std::cout << "motor left vel: " << motor_left << " motor right vel: " << motor_right << std::endl;
         if (! serial_off) {
-//        serial->write("LED_RING=3,0,0,10\n"); // Switch on led 3 to blue: motor left servoed
-//        serial->write("LED_RING=4,0,0,10\n"); // Switch on led 4 to blue: motor right servoed
+          //        serial->write("LED_RING=3,0,0,10\n"); // Switch on led 3 to blue: motor left servoed
+          //        serial->write("LED_RING=4,0,0,10\n"); // Switch on led 4 to blue: motor right servoed
         }
         std::stringstream ss;
         double rpm_left  = motor_left  * 30. / M_PI;
@@ -287,10 +287,10 @@ int main(int argc, const char **argv)
       else {
         // stop the robot
         if (! serial_off) {
-//        serial->write("LED_RING=2,10,0,0\n"); // Switch on led 2 to red: tag not detected
-//        serial->write("LED_RING=3,0,0,0\n"); // Switch on led 3 to blue: motor left not servoed
-//        serial->write("LED_RING=4,0,0,0\n"); // Switch on led 4 to blue: motor right not servoed
-//        serial->write("MOTOR_RPM=0,-0\n"); // Stop the robot
+          //        serial->write("LED_RING=2,10,0,0\n"); // Switch on led 2 to red: tag not detected
+          //        serial->write("LED_RING=3,0,0,0\n"); // Switch on led 3 to blue: motor left not servoed
+          //        serial->write("LED_RING=4,0,0,0\n"); // Switch on led 4 to blue: motor right not servoed
+          //        serial->write("MOTOR_RPM=0,-0\n"); // Stop the robot
         }
       }
 

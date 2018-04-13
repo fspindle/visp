@@ -12,7 +12,7 @@
 
 int main(int argc, const char **argv)
 {
-#if defined(VISP_HAVE_APRILTAG)// && defined(VISP_HAVE_V4L2)
+#if defined(VISP_HAVE_APRILTAG) && defined(VISP_HAVE_V4L2)
   int device = 0;
   vpDetectorAprilTag::vpAprilTagFamily tagFamily = vpDetectorAprilTag::TAG_36h11;
   vpDetectorAprilTag::vpPoseEstimationMethod poseEstimationMethod = vpDetectorAprilTag::HOMOGRAPHY_VIRTUAL_VS;
@@ -40,7 +40,7 @@ int main(int argc, const char **argv)
       camera_name = std::string(argv[i + 1]);
     } else if (std::string(argv[i]) == "--display_tag") {
       display_tag = true;
-#if !defined(VISP_HAVE_X11)
+#if defined(VISP_HAVE_X11)
     } else if (std::string(argv[i]) == "--display_on") {
       display_on = true;
 #endif
@@ -89,11 +89,11 @@ int main(int argc, const char **argv)
     g.acquire(I);
 
     vpDisplay *d = NULL;
-    if (display_on) {
 #ifdef VISP_HAVE_X11
+    if (display_on) {
       d = new vpDisplayX(I);
-#endif
     }
+#endif
 
     vpCameraParameters cam;
     cam.initPersProjWithoutDistortion(615.1674805, 615.1675415, I.getWidth() / 2., I.getHeight() / 2.);
