@@ -31,6 +31,7 @@ int main(int argc, const char **argv)
   bool display_tag = false;
   bool display_on = false;
   bool serial_off = false;
+  bool save_image = false; // Only possible if display_on = true
 
   for (int i = 1; i < argc; i++) {
     if (std::string(argv[i]) == "--tag_size" && i + 1 < argc) {
@@ -50,6 +51,8 @@ int main(int argc, const char **argv)
 #if defined(VISP_HAVE_X11)
     } else if (std::string(argv[i]) == "--display_on") {
       display_on = true;
+    } else if (std::string(argv[i]) == "--save_image") {
+      save_image = true;
 #endif
     } else if (std::string(argv[i]) == "--serial_off") {
       serial_off = true;
@@ -65,7 +68,7 @@ int main(int argc, const char **argv)
                    " 3: TAG_25h9, 4: TAG_25h7, 5: TAG_16h5)]"
                    " [--display_tag]";
 #if defined(VISP_HAVE_X11)
-      std::cout << " [--display_on]";
+      std::cout << " [--display_on] [--save_image]";
 #endif
       std::cout << " [--serial_off] [--help]" << std::endl;
       return EXIT_SUCCESS;
@@ -301,6 +304,12 @@ int main(int argc, const char **argv)
 
       vpDisplay::displayText(I, 20, 20, "Click to quit.", vpColor::red);
       vpDisplay::flush(I);
+
+      if (display_on && save_image) {
+        vpImage<RGBa> O;
+        vpDisplay::getImage(I, O);
+        vpImageIo::write(O, "image.png");
+      }
       if (vpDisplay::getClick(I, false))
         break;
     }
