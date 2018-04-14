@@ -268,7 +268,32 @@ To run this test on the Raspberry Pi:
 
 \subsection mbot_test_motor Testing mBot Ranger control
 
-We provide also an other test in test-serial-mbot.cpp that allows to check if instructions send from the Raspberry Pi to the mBot Ranger by serial link is working. If you build ViSP from source as explained in \ref tutorial-install-raspberry the corresponding binary is available in `/home/pi/visp-ws/visp/robot/mbot/raspberry/visp`.
+We suppose here that you have \ref mbot_ranger_arduino_controller. The communication between the uploaded mBot controller and Raspberry Pi is achieved by a serial link using RPi `/dev/ttyAMA0` port configured with the following parameters: 115200 baud, 8 bits, parity none, 1 stop bit and no control flow.
+
+We implement a basic communication protocol with the following keywords `MOTOR_RPM` and `LED_RING`. Each keyword has a set of parameters with comma as separator. The R,G,B color level is in range 0-255.
+~~~
+Keyword   | Parameters                                    | Example
+------------------------------------------------------------------------------
+MOTOR_RPM | left wheel RPM, right wheel RPM               | MOTOR_RPM=-100,100
+LED_RING  | led index, red level, green level, blue Level | LED_RING=0,0,10,0
+~~~
+
+The following sample code shows how to send instructions from Raspberry Pi to mBot controller to turn left wheel at -100 round per minute (RPM), right wheel at 100 RPM, and turn all the ring led on with green intensity set to 10. After 5 seconds, the ring led is turned off. Since in the mBot controller we implement a watch dog, the motors will be stop automatically by the watchdog.
+\code
+#include <visp3/core/vpSerial.h>
+#include <visp3/core/vpTime.h>
+
+int main()
+{
+  vpSerial serial("/dev/ttyAMA0", 115200);
+  serial.write("MOTOR_RPM=-100,100\n");
+  serial.write("LED_RING=0,0,10,0\n");
+  vpTime::sleep(5000);
+  serial.write("LED_RING=0,0,0,0\n");
+}
+\endcode
+
+We provide a test in test-serial-mbot.cpp that allows to check if instructions send from the Raspberry Pi to the mBot Ranger by serial link is working. If you build ViSP from source as explained in \ref tutorial-install-raspberry the corresponding binary is available in `/home/pi/visp-ws/visp/robot/mbot/raspberry/visp`.
 
 Run first this test on the Raspberry Pi with `--help` option:
 
@@ -283,6 +308,9 @@ Run first this test on the Raspberry Pi with `--help` option:
 You can now try to send a linear velocity of 5 cm/s during 4 sec to the robot using:
 
     $ ./test-serial-mbot --vx 0.05 --wz 0 --t 4
+    Apply v_x=0.05 m/s  w_z=0 deg/s during 4 seconds
+    Motor left vel: -1.53846 motor right vel: 1.53846 (rad/s)
+    Send: MOTOR_RPM=-14,14
  
 \section mbot_pi_vs Visual-servoing 
 \subsection mbot_pi_ibvs Image-based visual-servoing

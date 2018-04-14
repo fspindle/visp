@@ -193,13 +193,14 @@ int main(int argc, const char **argv)
       vpDisplay::displayText(I, 40, 20, ss.str(), vpColor::red);
 
       if (detector.getNbObjects() == 1) {
+        // Display visual features
+        vpHomogeneousMatrix cdMo(0, 0, Z_d, 0, 0, 0);
+        vpDisplay::displayFrame(I, cdMo, cam, tagSize / 3, vpColor::red, 3);
+        vpDisplay::displayCross(I, detector.getCog(0), 15, vpColor::green, 3); // Current polygon used to compure an moment
+        vpDisplay::displayLine(I, 0, cam.get_u0(), I.getHeight()-1, cam.get_u0(), vpColor::red, 3); // Vertical line as desired x position
         if (use_pose) {
           // Display visual features
-          vpHomogeneousMatrix cdMo(0, 0, Z_d, 0, 0, 0);
           vpDisplay::displayFrame(I, cMo_vec[0], cam, tagSize / 2, vpColor::none, 3);
-          vpDisplay::displayFrame(I, cdMo, cam, tagSize / 3, vpColor::red, 3);
-          vpDisplay::displayCross(I, detector.getCog(0), 15, vpColor::green, 3); // Current polygon used to compure an moment
-          vpDisplay::displayLine(I, 0, cam.get_u0(), I.getHeight()-1, cam.get_u0(), vpColor::red, 3); // Vertical line as desired x position
         }
 
         if (! serial_off) {
