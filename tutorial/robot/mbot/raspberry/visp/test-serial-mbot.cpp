@@ -31,7 +31,7 @@ int main(int argc, char *argv[])
     }
   }
 
-  vpSerial serial("/dev/ttyAMA0", 9600);
+  vpSerial serial("/dev/ttyAMA0", 115200);
 
   {
     std::stringstream ss;
