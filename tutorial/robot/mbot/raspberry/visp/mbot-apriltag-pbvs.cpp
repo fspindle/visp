@@ -150,8 +150,8 @@ int main(int argc, const char **argv)
     s_XZ_d.buildFrom(0, 0, Z_d);
 
     // Create Point 3D X, Z coordinates visual features
-    s_XZ.buildFrom(X / Z, Y / Z, Z, 0); // log(Z/Z*) = 0 that's why the last parameter is 0
-    s_XZ_d.buildFrom(0, 0, Z_d, 0);     // The value of s* is 0 with Z=Z_d meter
+    s_XZ.buildFrom(X, Y, Z);
+    s_XZ_d.buildFrom(0, 0, Z_d);     // The value of s* is 0 with Z=Z_d meter
 
     // Add the features
     task.addFeature(s_XZ, s_XZ_d, vpFeaturePoint3D::selectX() | vpFeaturePoint3D::selectZ());
@@ -188,7 +188,7 @@ int main(int argc, const char **argv)
         double Z = cMo_vec[0][2][3];
 
         // Update Point 3D feature
-        s_X.set_XYZ(X, Y, Z);
+        s_XZ.set_XYZ(X, Y, Z);
 
         std::cout << "X: " << X << " Z: " << Z << std::endl;
 
