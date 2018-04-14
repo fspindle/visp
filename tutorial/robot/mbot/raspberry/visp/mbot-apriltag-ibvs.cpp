@@ -266,6 +266,7 @@ int main(int argc, const char **argv)
         mdb.updateAll(m_obj); // All of the moments must be updated, not just an_d
         mg.compute();          // Compute gravity center moment
         mc.compute();         // Compute centered moments AFTER gravity center
+        man.setDesiredArea(area);
         man.compute();         // Compute area normalized moment AFTER centered moment
         mgn.compute();         // Compute gravity center normalized moment AFTER area normalized moment
 
