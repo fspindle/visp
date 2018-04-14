@@ -25,12 +25,12 @@ int main(int argc, const char **argv)
   bool display_tag = false;
   bool display_on = false;
   bool serial_off = false;
-  bool use_pose = false;
+  bool use_pose = true;
   bool save_image = false; // Only possible if display_on = true
 
   for (int i = 1; i < argc; i++) {
-    if (std::string(argv[i]) == "--use_pose") {
-      use_pose = true;
+    if (std::string(argv[i]) == "--without_pose_computation") {
+      use_pose = false;
     } else if (std::string(argv[i]) == "--tag_size" && i + 1 < argc) {
       tagSize = std::atof(argv[i + 1]);
     } else if (std::string(argv[i]) == "--input" && i + 1 < argc) {
@@ -59,7 +59,7 @@ int main(int argc, const char **argv)
       std::cout << "Usage: " << argv[0]
                 << " [--input <camera input>] [--tag_size <tag_size in m>]"
                    " [--quad_decimate <quad_decimate>] [--nthreads <nb>]"
-                   " [--intrinsic <intrinsic file>] [--camera_name <camera name>] [--use_pose]"
+                   " [--intrinsic <intrinsic file>] [--camera_name <camera name>] [--without_pose_computation]"
                    " [--tag_family <family> (0: TAG_36h11, 1: TAG_36h10, 2: TAG_36ARTOOLKIT,"
                    " 3: TAG_25h9, 4: TAG_25h7, 5: TAG_16h5)]"
                    " [--display_tag]";
