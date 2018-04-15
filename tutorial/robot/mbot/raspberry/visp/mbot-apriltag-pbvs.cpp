@@ -66,6 +66,7 @@ int main(int argc, const char **argv)
     }
   }
 
+  // Me Auriga led ring
   // if serial com ok: led 1 green
   // if exception: led 1 red
   // if tag detected: led 2 green, else led 2 red
@@ -76,7 +77,7 @@ int main(int argc, const char **argv)
   if (! serial_off) {
     serial = new vpSerial("/dev/ttyAMA0", 115200);
 
-    serial->write("LED_RING=0,0,0,0\n"); // Switch off all led
+    serial->write("LED_RING=0,0,0,0\n");  // Switch off all led
     serial->write("LED_RING=1,0,10,0\n"); // Switch on led 1 to green: serial ok
   }
 
@@ -223,9 +224,9 @@ int main(int argc, const char **argv)
         // stop the robot
         if (! serial_off) {
           serial->write("LED_RING=2,10,0,0\n"); // Switch on led 2 to red: tag not detected
-          serial->write("LED_RING=3,0,0,0\n"); // Switch on led 3 to blue: motor left not servoed
-          serial->write("LED_RING=4,0,0,0\n"); // Switch on led 4 to blue: motor right not servoed
-          serial->write("MOTOR_RPM=0,-0\n"); // Stop the robot
+          serial->write("LED_RING=3,0,0,0\n");  // Switch on led 3 to blue: motor left not servoed
+          serial->write("LED_RING=4,0,0,0\n");  // Switch on led 4 to blue: motor right not servoed
+          serial->write("MOTOR_RPM=0,-0\n");    // Stop the robot
         }
       }
 

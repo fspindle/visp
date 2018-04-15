@@ -76,6 +76,7 @@ int main(int argc, const char **argv)
     }
   }
 
+  // Me Auriga led ring
   // if serial com ok: led 1 green
   // if exception: led 1 red
   // if tag detected: led 2 green, else led 2 red
@@ -86,7 +87,7 @@ int main(int argc, const char **argv)
   if (! serial_off) {
     serial = new vpSerial("/dev/ttyAMA0", 115200);
 
-    serial->write("LED_RING=0,0,0,0\n"); // Switch off all led
+    serial->write("LED_RING=0,0,0,0\n");  // Switch off all led
     serial->write("LED_RING=1,0,10,0\n"); // Switch on led 1 to green: serial ok
   }
 
@@ -174,8 +175,8 @@ int main(int argc, const char **argv)
     vpMomentGravityCenterNormalized mgn, mgn_d;        // Declare normalized gravity center
 
     // Desired moments
-    m_obj_d.setType(vpMomentObject::DENSE_POLYGON); // Consider the AprilTag as a polygon
-    m_obj_d.fromVector(vec_P_d);                    // Initialize the object with the points coordinates
+    m_obj_d.setType(vpMomentObject::DENSE_POLYGON);    // Consider the AprilTag as a polygon
+    m_obj_d.fromVector(vec_P_d);                       // Initialize the object with the points coordinates
 
     mb_d.linkTo(mdb_d);       // Add basic moments to database
     mg_d.linkTo(mdb_d);       // Add gravity center to database
@@ -259,16 +260,16 @@ int main(int argc, const char **argv)
         m_obj.setType(vpMomentObject::DENSE_POLYGON); // Consider the AprilTag as a polygon
         m_obj.fromVector(vec_P);                      // Initialize the object with the points coordinates
 
-        mg.linkTo(mdb);       // Add gravity center to database
-        mc.linkTo(mdb);       // Add centered moments to database
-        man.linkTo(mdb);      // Add area normalized to database
-        mgn.linkTo(mdb);      // Add gravity center normalized to database
-        mdb.updateAll(m_obj); // All of the moments must be updated, not just an_d
-        mg.compute();         // Compute gravity center moment
-        mc.compute();         // Compute centered moments AFTER gravity center
+        mg.linkTo(mdb);           // Add gravity center to database
+        mc.linkTo(mdb);           // Add centered moments to database
+        man.linkTo(mdb);          // Add area normalized to database
+        mgn.linkTo(mdb);          // Add gravity center normalized to database
+        mdb.updateAll(m_obj);     // All of the moments must be updated, not just an_d
+        mg.compute();             // Compute gravity center moment
+        mc.compute();             // Compute centered moments AFTER gravity center
         man.setDesiredArea(area); // Since desired area was init at 0, because unknow at contruction, need to be updated here
-        man.compute();        // Compute area normalized moment AFTER centered moment
-        mgn.compute();        // Compute gravity center normalized moment AFTER area normalized moment
+        man.compute();            // Compute area normalized moment AFTER centered moment
+        mgn.compute();            // Compute gravity center normalized moment AFTER area normalized moment
 
         s_mgn.update(A, B, C);
         s_mgn.compute_interaction();
