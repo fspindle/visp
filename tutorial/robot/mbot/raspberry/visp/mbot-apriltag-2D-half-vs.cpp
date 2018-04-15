@@ -71,7 +71,7 @@ int main(int argc, const char **argv)
     }
   }
 
-  // if com ok: led 1 green
+  // if serial com ok: led 1 green
   // if exception: led 1 red
   // if tag detected: led 2 green, else led 2 red
   // if motor left: led 3 blue
@@ -167,7 +167,7 @@ int main(int argc, const char **argv)
 
     std::cout << "Z " << Z << std::endl;
     s_Z.buildFrom(s_x.get_x(), s_x.get_y(), Z, 0); // log(Z/Z*) = 0 that's why the last parameter is 0
-    s_Z_d.buildFrom(0, 0, Z_d, 0); // The value of s* is 0 with Z=1 meter
+    s_Z_d.buildFrom(0, 0, Z_d, 0);                 // The value of s* is 0 with Z=1 meter
 
     // Add the feature
     task.addFeature(s_Z, s_Z_d);
@@ -204,7 +204,7 @@ int main(int argc, const char **argv)
         }
 
         if (! serial_off) {
-//        serial->write("LED_RING=2,0,10,0\n"); // Switch on led 2 to green: tag detected
+          serial->write("LED_RING=2,0,10,0\n"); // Switch on led 2 to green: tag detected
         }
 
         if (use_pose) {
@@ -222,8 +222,7 @@ int main(int argc, const char **argv)
         vpFeatureBuilder::create(s_x, cam, detector.getCog(0));
         s_x.set_Z(Z);
 
-        // Update log(Z/Z*) feature. Since the depth Z change, we need to update
-        // the intection matrix
+        // Update log(Z/Z*) feature
         s_Z.buildFrom(s_x.get_x(), s_x.get_y(), Z, log(Z / Z_d));
 
         std::cout << "cog: " << detector.getCog(0) << " Z: " << Z << std::endl;
@@ -243,8 +242,8 @@ int main(int argc, const char **argv)
         double motor_right = ( v[0] - L * v[1]) / radius;
         std::cout << "motor left vel: " << motor_left << " motor right vel: " << motor_right << std::endl;
         if (! serial_off) {
-//        serial->write("LED_RING=3,0,0,10\n"); // Switch on led 3 to blue: motor left servoed
-//        serial->write("LED_RING=4,0,0,10\n"); // Switch on led 4 to blue: motor right servoed
+          serial->write("LED_RING=3,0,0,10\n"); // Switch on led 3 to blue: motor left servoed
+          serial->write("LED_RING=4,0,0,10\n"); // Switch on led 4 to blue: motor right servoed
         }
         std::stringstream ss;
         double rpm_left  = motor_left  * 30. / M_PI;
@@ -258,10 +257,10 @@ int main(int argc, const char **argv)
       else {
         // stop the robot
         if (! serial_off) {
-//        serial->write("LED_RING=2,10,0,0\n"); // Switch on led 2 to red: tag not detected
-//        serial->write("LED_RING=3,0,0,0\n"); // Switch on led 3 to blue: motor left not servoed
-//        serial->write("LED_RING=4,0,0,0\n"); // Switch on led 4 to blue: motor right not servoed
-//        serial->write("MOTOR_RPM=0,-0\n"); // Stop the robot
+          serial->write("LED_RING=2,10,0,0\n"); // Switch on led 2 to red: tag not detected
+          serial->write("LED_RING=3,0,0,0\n"); // Switch on led 3 to blue: motor left not servoed
+          serial->write("LED_RING=4,0,0,0\n"); // Switch on led 4 to blue: motor right not servoed
+          serial->write("MOTOR_RPM=0,-0\n"); // Stop the robot
         }
       }
 

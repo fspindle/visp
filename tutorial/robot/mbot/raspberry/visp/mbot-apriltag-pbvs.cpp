@@ -66,7 +66,7 @@ int main(int argc, const char **argv)
     }
   }
 
-  // if com ok: led 1 green
+  // if serial com ok: led 1 green
   // if exception: led 1 red
   // if tag detected: led 2 green, else led 2 red
   // if motor left: led 3 blue
@@ -151,7 +151,7 @@ int main(int argc, const char **argv)
 
     // Create Point 3D X, Z coordinates visual features
     s_XZ.buildFrom(X, Y, Z);
-    s_XZ_d.buildFrom(0, 0, Z_d);     // The value of s* is 0 with Z=Z_d meter
+    s_XZ_d.buildFrom(0, 0, Z_d);  // The value of s* is X=Y=0 and Z=Z_d meter
 
     // Add the features
     task.addFeature(s_XZ, s_XZ_d, vpFeaturePoint3D::selectX() | vpFeaturePoint3D::selectZ());
@@ -180,7 +180,7 @@ int main(int argc, const char **argv)
         vpDisplay::displayFrame(I, cdMo, cam, tagSize / 3, vpColor::red, 3);
 
         if (! serial_off) {
-//        serial->write("LED_RING=2,0,10,0\n"); // Switch on led 2 to green: tag detected
+          serial->write("LED_RING=2,0,10,0\n"); // Switch on led 2 to green: tag detected
         }
 
         double X = cMo_vec[0][0][3];
@@ -207,8 +207,8 @@ int main(int argc, const char **argv)
         double motor_right = ( v[0] - L * v[1]) / radius;
         std::cout << "motor left vel: " << motor_left << " motor right vel: " << motor_right << std::endl;
         if (! serial_off) {
-//        serial->write("LED_RING=3,0,0,10\n"); // Switch on led 3 to blue: motor left servoed
-//        serial->write("LED_RING=4,0,0,10\n"); // Switch on led 4 to blue: motor right servoed
+          serial->write("LED_RING=3,0,0,10\n"); // Switch on led 3 to blue: motor left servoed
+          serial->write("LED_RING=4,0,0,10\n"); // Switch on led 4 to blue: motor right servoed
         }
         std::stringstream ss;
         double rpm_left  = motor_left  * 30. / M_PI;
@@ -222,10 +222,10 @@ int main(int argc, const char **argv)
       else {
         // stop the robot
         if (! serial_off) {
-//        serial->write("LED_RING=2,10,0,0\n"); // Switch on led 2 to red: tag not detected
-//        serial->write("LED_RING=3,0,0,0\n"); // Switch on led 3 to blue: motor left not servoed
-//        serial->write("LED_RING=4,0,0,0\n"); // Switch on led 4 to blue: motor right not servoed
-//        serial->write("MOTOR_RPM=0,-0\n"); // Stop the robot
+          serial->write("LED_RING=2,10,0,0\n"); // Switch on led 2 to red: tag not detected
+          serial->write("LED_RING=3,0,0,0\n"); // Switch on led 3 to blue: motor left not servoed
+          serial->write("LED_RING=4,0,0,0\n"); // Switch on led 4 to blue: motor right not servoed
+          serial->write("MOTOR_RPM=0,-0\n"); // Stop the robot
         }
       }
 
