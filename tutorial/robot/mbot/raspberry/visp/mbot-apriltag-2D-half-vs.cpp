@@ -127,7 +127,7 @@ int main(int argc, const char **argv)
     if (display_on)
       lambda.initStandard(2.5, 0.4, 30); // lambda(0)=2.5, lambda(oo)=0.4 and lambda'(0)=30
     else
-      lambda.initStandard(4.5, 0.4, 30); // lambda(0)=4.5, lambda(oo)=0.4 and lambda'(0)=30
+      lambda.initStandard(4, 0.4, 30);   // lambda(0)=4, lambda(oo)=0.4 and lambda'(0)=30
 
     vpUnicycle robot;
     task.setServo(vpServo::EYEINHAND_L_cVe_eJe);
