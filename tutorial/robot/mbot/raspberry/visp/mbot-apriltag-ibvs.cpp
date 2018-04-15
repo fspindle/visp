@@ -76,7 +76,7 @@ int main(int argc, const char **argv)
     }
   }
 
-  // if com ok: led 1 green
+  // if serial com ok: led 1 green
   // if exception: led 1 red
   // if tag detected: led 2 green, else led 2 red
   // if motor left: led 3 blue
@@ -235,7 +235,7 @@ int main(int argc, const char **argv)
 
       if (detector.getNbObjects() == 1) {
         if (! serial_off) {
-          //        serial->write("LED_RING=2,0,10,0\n"); // Switch on led 2 to green: tag detected
+          serial->write("LED_RING=2,0,10,0\n"); // Switch on led 2 to green: tag detected
         }
 
         // Update current points used to compute the moments
@@ -259,16 +259,16 @@ int main(int argc, const char **argv)
         m_obj.setType(vpMomentObject::DENSE_POLYGON); // Consider the AprilTag as a polygon
         m_obj.fromVector(vec_P);                      // Initialize the object with the points coordinates
 
-        mg.linkTo(mdb);        // Add gravity center to database
+        mg.linkTo(mdb);       // Add gravity center to database
         mc.linkTo(mdb);       // Add centered moments to database
-        man.linkTo(mdb);       // Add area normalized to database
-        mgn.linkTo(mdb);       // Add gravity center normalized to database
+        man.linkTo(mdb);      // Add area normalized to database
+        mgn.linkTo(mdb);      // Add gravity center normalized to database
         mdb.updateAll(m_obj); // All of the moments must be updated, not just an_d
-        mg.compute();          // Compute gravity center moment
+        mg.compute();         // Compute gravity center moment
         mc.compute();         // Compute centered moments AFTER gravity center
-        man.setDesiredArea(area);
-        man.compute();         // Compute area normalized moment AFTER centered moment
-        mgn.compute();         // Compute gravity center normalized moment AFTER area normalized moment
+        man.setDesiredArea(area); // Since desired area was init at 0, because unknow at contruction, need to be updated here
+        man.compute();        // Compute area normalized moment AFTER centered moment
+        mgn.compute();        // Compute gravity center normalized moment AFTER area normalized moment
 
         s_mgn.update(A, B, C);
         s_mgn.compute_interaction();
@@ -290,8 +290,8 @@ int main(int argc, const char **argv)
         double motor_right = ( v[0] - L * v[1]) / radius;
         std::cout << "motor left vel: " << motor_left << " motor right vel: " << motor_right << std::endl;
         if (! serial_off) {
-          //        serial->write("LED_RING=3,0,0,10\n"); // Switch on led 3 to blue: motor left servoed
-          //        serial->write("LED_RING=4,0,0,10\n"); // Switch on led 4 to blue: motor right servoed
+          serial->write("LED_RING=3,0,0,10\n"); // Switch on led 3 to blue: motor left servoed
+          serial->write("LED_RING=4,0,0,10\n"); // Switch on led 4 to blue: motor right servoed
         }
         std::stringstream ss;
         double rpm_left  = motor_left  * 30. / M_PI;
@@ -305,10 +305,10 @@ int main(int argc, const char **argv)
       else {
         // stop the robot
         if (! serial_off) {
-          //        serial->write("LED_RING=2,10,0,0\n"); // Switch on led 2 to red: tag not detected
-          //        serial->write("LED_RING=3,0,0,0\n"); // Switch on led 3 to blue: motor left not servoed
-          //        serial->write("LED_RING=4,0,0,0\n"); // Switch on led 4 to blue: motor right not servoed
-          //        serial->write("MOTOR_RPM=0,-0\n"); // Stop the robot
+          serial->write("LED_RING=2,10,0,0\n"); // Switch on led 2 to red: tag not detected
+          serial->write("LED_RING=3,0,0,0\n");  // Switch on led 3 to blue: motor left not servoed
+          serial->write("LED_RING=4,0,0,0\n");  // Switch on led 4 to blue: motor right not servoed
+          serial->write("MOTOR_RPM=0,-0\n");    // Stop the robot
         }
       }
 
