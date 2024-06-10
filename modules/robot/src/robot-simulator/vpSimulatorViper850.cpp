@@ -81,14 +81,19 @@ vpSimulatorViper850::vpSimulatorViper850(bool do_display)
   : vpRobotWireFrameSimulator(do_display), q_prev_getdis(), first_time_getdis(true),
   positioningVelocity(defaultPositioningVelocity), zeroPos(), reposPos(), toolCustom(false), arm_dir()
 {
+  std::cout << "DBG1: begin vpSimulatorViper850(bool do_display)" << std::endl;
   init();
+  std::cout << "DBG1: after init()" << std::endl;
   initDisplay();
+  std::cout << "DBG1: after initDisplay()" << std::endl;
 
   tcur = vpTime::measureTimeMs();
 
   m_thread = new std::thread(&launcher, std::ref(*this));
+  std::cout << "DBG1: after std::thread()" << std::endl;
 
   compute_fMi();
+  std::cout << "DBG1: end vpSimulatorViper850(bool do_display)" << std::endl;
 }
 
 /*!
@@ -123,6 +128,7 @@ vpSimulatorViper850::~vpSimulatorViper850()
 */
 void vpSimulatorViper850::init()
 {
+  std::cout << "DBG2: begin vpSimulatorViper850::init()" << std::endl;
   // set arm_dir from #define VISP_ROBOT_ARMS_DIR if it exists
   // VISP_ROBOT_ARMS_DIR may contain multiple locations separated by ";"
   std::vector<std::string> arm_dirs = vpIoTools::splitChain(std::string(VISP_ROBOT_ARMS_DIR), std::string(";"));
@@ -143,7 +149,9 @@ void vpSimulatorViper850::init()
     }
   }
 
+  std::cout << "DBG2: before this->init(vpViper850::defaultTool)" << std::endl;
   this->init(vpViper850::defaultTool);
+  std::cout << "DBG2: after this->init(vpViper850::defaultTool)" << std::endl;
   toolCustom = false;
 
   size_fMi = 8;
@@ -188,6 +196,7 @@ void vpSimulatorViper850::init()
   joint_max[3] = vpMath::rad(190);
   joint_max[4] = vpMath::rad(110);
   joint_max[5] = vpMath::rad(184);
+  std::cout << "DBG2: end vpSimulatorViper850::init()" << std::endl;
 }
 
 /*!
@@ -195,17 +204,22 @@ void vpSimulatorViper850::init()
 */
 void vpSimulatorViper850::initDisplay()
 {
+  std::cout << "DBG3: begin vpSimulatorViper850::initDisplay()" << std::endl;
   robotArms = nullptr;
   robotArms = new Bound_scene[6];
   initArms();
   setExternalCameraPosition(vpHomogeneousMatrix(0.0, 0.5, 1.5, vpMath::rad(90), 0, 0));
+
+  std::cout << "DBG3: after setExternalCameraPosition" << std::endl;
   cameraParam.initPersProjWithoutDistortion(558.5309599, 556.055053, 320, 240);
   setExternalCameraParameters(cameraParam);
+  std::cout << "DBG3: after setExternalCameraParameters" << std::endl;
   vpCameraParameters tmp;
   getCameraParameters(tmp, 640, 480);
   px_int = tmp.get_px();
   py_int = tmp.get_py();
   sceneInitialized = true;
+  std::cout << "DBG3: end vpSimulatorViper850::initDisplay()" << std::endl;
 }
 
 /*!
