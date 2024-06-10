@@ -49,7 +49,7 @@ BEGIN_VISP_NAMESPACE
 */
 vpRobotWireFrameSimulator::vpRobotWireFrameSimulator()
   : vpWireFrameSimulator(), vpRobotSimulator(), I(), tcur(0), tprev(0), robotArms(nullptr), size_fMi(8), fMi(nullptr),
-  artCoord(), artVel(), velocity(), m_thread(), m_mutex_fMi(), m_mutex_eMc(), m_mutex_artVel(), m_mutex_artCoord(),
+  artCoord(), artVel(), velocity(), m_thread(), m_mutex_fMi(), m_mutex_eMc(), m_mutex_artVel(), /*m_mutex_artCoord(),*/
   m_mutex_velocity(), m_mutex_display(), m_mutex_robotStop(), m_mutex_frame(), m_mutex_setVelocityCalled(),
   m_mutex_scene(), displayBusy(false), robotStop(false), jointLimit(false), jointLimitArt(false),
   singularityManagement(true), cameraParam(),
@@ -74,7 +74,7 @@ vpRobotWireFrameSimulator::vpRobotWireFrameSimulator()
   */
 vpRobotWireFrameSimulator::vpRobotWireFrameSimulator(bool do_display)
   : vpWireFrameSimulator(), vpRobotSimulator(), I(), tcur(0), tprev(0), robotArms(nullptr), size_fMi(8), fMi(nullptr),
-  artCoord(), artVel(), velocity(), m_thread(), m_mutex_fMi(), m_mutex_eMc(), m_mutex_artVel(), m_mutex_artCoord(),
+  artCoord(), artVel(), velocity(), m_thread(), m_mutex_fMi(), m_mutex_eMc(), m_mutex_artVel(), /*m_mutex_artCoord(),*/
   m_mutex_velocity(), m_mutex_display(), m_mutex_robotStop(), m_mutex_frame(), m_mutex_setVelocityCalled(), m_mutex_scene(),
   displayBusy(false), robotStop(false), jointLimit(false), jointLimitArt(false), singularityManagement(true),
   cameraParam(),
