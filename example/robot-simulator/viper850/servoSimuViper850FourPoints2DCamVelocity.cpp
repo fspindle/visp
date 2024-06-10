@@ -175,6 +175,14 @@ bool getOptions(int argc, const char **argv, bool &click_allowed, bool &display)
 
 int main(int argc, const char **argv)
 {
+  std::mutex my_mutex;
+  int var = 5;
+  my_mutex.lock();
+  var = 6;
+  my_mutex.unlock();
+  std::cout << "var: " << var << std::endl;
+  return EXIT_SUCCESS;
+
   std::cout << "DBG: Start " << argv[0] << std::endl;
   try {
     bool opt_click_allowed = true;

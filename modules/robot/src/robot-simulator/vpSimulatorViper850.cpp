@@ -538,6 +538,7 @@ void vpSimulatorViper850::compute_fMi()
   // vpColVector q = get_artCoord();
   vpColVector q(6); //; = get_artCoord();
   q = get_artCoord();
+  std::cout << "DBG5 after q = get_artCoord();" << std::endl;
 
   vpHomogeneousMatrix fMit[8];
 
