@@ -239,11 +239,13 @@ void vpSimulatorViper850::initDisplay()
 */
 void vpSimulatorViper850::init(vpViper850::vpToolType tool, vpCameraParameters::vpCameraParametersProjType proj_model)
 {
+  std::cout << "DBG4: begin vpSimulatorViper850::init()" << std::endl;
   this->projModel = proj_model;
 
   // Use here default values of the robot constant parameters.
   switch (tool) {
   case vpViper850::TOOL_MARLIN_F033C_CAMERA: {
+    std::cout << "DBG4: tool = vpViper850::TOOL_MARLIN_F033C_CAMERA" << std::endl;
     erc[0] = vpMath::rad(0.07);   // rx
     erc[1] = vpMath::rad(2.76);   // ry
     erc[2] = vpMath::rad(-91.50); // rz
@@ -255,6 +257,7 @@ void vpSimulatorViper850::init(vpViper850::vpToolType tool, vpCameraParameters::
     break;
   }
   case vpViper850::TOOL_PTGREY_FLEA2_CAMERA: {
+    std::cout << "DBG4: tool = vpViper850::TOOL_PTGREY_FLEA2_CAMERA" << std::endl;
     erc[0] = vpMath::rad(0.1527764261); // rx
     erc[1] = vpMath::rad(1.285092455);  // ry
     erc[2] = vpMath::rad(-90.75777848); // rz
@@ -273,13 +276,21 @@ void vpSimulatorViper850::init(vpViper850::vpToolType tool, vpCameraParameters::
   }
   }
 
-  vpRotationMatrix eRc(erc);
+  std::cout << "DBG4: before vpRotationMatrix eRc" << std::endl;
 
+  std::cout << "DBG4: erc: " << erc << std::endl;
+  vpRotationMatrix eRc(erc);
+  std::cout << "DBG4: eRc: \n" << eRc << std::endl;
+  std::cout << "DBG4: after vpRotationMatrix eRc" << std::endl;
   m_mutex_eMc.lock();
   this->eMc.build(etc, eRc);
+
+  std::cout << "DBG4: eMc:\n" << eMc << std::endl;
   m_mutex_eMc.unlock();
 
+  std::cout << "DBG4: after eMc.build()" << std::endl;
   setToolType(tool);
+  std::cout << "DBG4: end vpSimulatorViper850::init()" << std::endl;
   return;
 }
 
