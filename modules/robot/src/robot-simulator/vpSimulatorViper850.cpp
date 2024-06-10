@@ -278,17 +278,16 @@ void vpSimulatorViper850::init(vpViper850::vpToolType tool, vpCameraParameters::
 
   std::cout << "DBG4: before vpRotationMatrix eRc" << std::endl;
 
-  std::cout << "DBG4: erc: " << erc << std::endl;
+  std::cout << "DBG4: erc: " << erc.t() << std::endl;
   vpRotationMatrix eRc(erc);
   std::cout << "DBG4: eRc: \n" << eRc << std::endl;
   std::cout << "DBG4: after vpRotationMatrix eRc" << std::endl;
   m_mutex_eMc.lock();
-  this->eMc.build(etc, eRc);
-
+  std::cout << "DBG4: after m_mutex_eMc.lock()" << std::endl;
+  eMc.build(etc, eRc);
   std::cout << "DBG4: eMc:\n" << eMc << std::endl;
   m_mutex_eMc.unlock();
-
-  std::cout << "DBG4: after eMc.build()" << std::endl;
+  std::cout << "DBG4: after m_mutex_eMc.unlock()" << std::endl;
   setToolType(tool);
   std::cout << "DBG4: end vpSimulatorViper850::init()" << std::endl;
   return;
