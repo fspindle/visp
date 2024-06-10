@@ -175,6 +175,7 @@ bool getOptions(int argc, const char **argv, bool &click_allowed, bool &display)
 
 int main(int argc, const char **argv)
 {
+  std::cout << "DBG: Start " << argv[0] << std::endl;
   try {
     bool opt_click_allowed = true;
     bool opt_display = true;
@@ -184,8 +185,9 @@ int main(int argc, const char **argv)
       return EXIT_FAILURE;
     }
 
-    // We open two displays, one for the internal camera view, the other one for
-    // the external view, using either X11, GTK or GDI.
+    std::cout << "DBG: After getOptions()" << std::endl;
+      // We open two displays, one for the internal camera view, the other one for
+      // the external view, using either X11, GTK or GDI.
 #if defined(VISP_HAVE_X11)
     vpDisplayX displayInt;
 #elif defined(VISP_HAVE_GDI)
@@ -194,6 +196,7 @@ int main(int argc, const char **argv)
     vpDisplayOpenCV displayInt;
 #endif
 
+    std::cout << "DBG: After vpDisplay() creation" << std::endl;
     vpImage<unsigned char> Iint(480, 640, 255);
 
     if (opt_display) {
@@ -201,6 +204,7 @@ int main(int argc, const char **argv)
       displayInt.init(Iint, 700, 0, "Internal view");
     }
 
+    std::cout << "DBG: After vpDisplay() init" << std::endl;
     vpServo task;
 
     std::cout << std::endl;
@@ -222,8 +226,9 @@ int main(int argc, const char **argv)
     point[2].setWorldCoordinates(0.045, 0.045, 0);
     point[1].setWorldCoordinates(0.045, -0.045, 0);
 
-    // computes the point coordinates in the camera frame and its 2D
-    // coordinates
+    std::cout << "DBG: After model creation" << std::endl;
+      // computes the point coordinates in the camera frame and its 2D
+      // coordinates
     for (unsigned int i = 0; i < 4; i++)
       point[i].track(cMo);
 
@@ -235,7 +240,8 @@ int main(int argc, const char **argv)
     // sets the desired position of the feature point s*
     vpFeaturePoint pd[4];
 
-    // Desired pose
+    std::cout << "DBG: After feature point" << std::endl;
+      // Desired pose
     vpHomogeneousMatrix cdMo(vpHomogeneousMatrix(0.0, 0.0, 0.8, vpMath::rad(0), vpMath::rad(0), vpMath::rad(0)));
 
     // Projection of the points
@@ -258,10 +264,13 @@ int main(int argc, const char **argv)
     // set the gain
     task.setLambda(0.8);
 
-    // Declaration of the robot
+    std::cout << "DBG: After task" << std::endl;
+      // Declaration of the robot
     vpSimulatorAfma6 robot(opt_display);
 
-    // Initialise the robot and especially the camera
+    std::cout << "DBG: vpSimulatorAfma6" << std::endl;
+
+      // Initialise the robot and especially the camera
     robot.init(vpAfma6::TOOL_CCMOP, vpCameraParameters::perspectiveProjWithoutDistortion);
     robot.setRobotState(vpRobot::STATE_VELOCITY_CONTROL);
 
@@ -275,10 +284,12 @@ int main(int argc, const char **argv)
     // Set the desired position (for the displaypart)
     robot.setDesiredCameraPosition(cdMo);
 
-    // Get the internal robot's camera parameters
+    std::cout << "DBG: robot init" << std::endl;
+      // Get the internal robot's camera parameters
     vpCameraParameters cam;
     robot.getCameraParameters(cam, Iint);
 
+    std::cout << "DBG: robot.getCameraParameters()" << std::endl;
     if (opt_display) {
       // Get the internal view
       vpDisplay::display(Iint);
@@ -291,6 +302,8 @@ int main(int argc, const char **argv)
 
     unsigned int iter = 0;
     vpTRACE("\t loop");
+
+    std::cout << "DBG: before loop" << std::endl;
     while (iter++ < 500) {
       std::cout << "---------------------------------------------" << iter << std::endl;
       vpColVector v;

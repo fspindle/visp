@@ -175,6 +175,7 @@ bool getOptions(int argc, const char **argv, bool &click_allowed, bool &display)
 
 int main(int argc, const char **argv)
 {
+  std::cout << "DBG: Start " << argv[0] << std::endl;
   try {
     bool opt_click_allowed = true;
     bool opt_display = true;
@@ -216,69 +217,88 @@ int main(int argc, const char **argv)
     // sets the initial camera location
     vpHomogeneousMatrix cMo(-0.05, -0.05, 0.7, vpMath::rad(10), vpMath::rad(10), vpMath::rad(-30));
 
-    // sets the point coordinates in the object frame
+    std::cout << "DBG: After cMo " << std::endl;
+      // sets the point coordinates in the object frame
     vpPoint point[4];
     point[0].setWorldCoordinates(-0.045, -0.045, 0);
     point[3].setWorldCoordinates(-0.045, 0.045, 0);
     point[2].setWorldCoordinates(0.045, 0.045, 0);
     point[1].setWorldCoordinates(0.045, -0.045, 0);
 
+    std::cout << "DBG: After vpPoint " << std::endl;
     // computes the point coordinates in the camera frame and its 2D
     // coordinates
     for (unsigned int i = 0; i < 4; i++)
       point[i].track(cMo);
 
+    std::cout << "DBG: track point " << std::endl;
     // sets the desired position of the point
     vpFeaturePoint p[4];
     for (unsigned int i = 0; i < 4; i++)
       vpFeatureBuilder::create(p[i], point[i]); // retrieve x,y and Z of the vpPoint structure
 
+    std::cout << "DBG: feature p " << std::endl;
     // sets the desired position of the feature point s*
     vpFeaturePoint pd[4];
 
+    std::cout << "DBG: feature pd " << std::endl;
     // Desired pose
     vpHomogeneousMatrix cdMo(vpHomogeneousMatrix(0.0, 0.0, 0.8, vpMath::rad(0), vpMath::rad(0), vpMath::rad(0)));
 
+    std::cout << "DBG: after cdMo " << std::endl;
     // Projection of the points
     for (unsigned int i = 0; i < 4; i++)
       point[i].track(cdMo);
 
+    std::cout << "DBG: after track(cdMo) " << std::endl;
     for (unsigned int i = 0; i < 4; i++)
       vpFeatureBuilder::create(pd[i], point[i]);
 
+    std::cout << "DBG: create pd " << std::endl;
     // define the task
     // - we want an eye-in-hand control law
     // - articular velocity are computed
     task.setServo(vpServo::EYEINHAND_CAMERA);
     task.setInteractionMatrixType(vpServo::DESIRED);
 
+    std::cout << "DBG: task desired " << std::endl;
     // - we want to see a point on a point
     for (unsigned int i = 0; i < 4; i++)
       task.addFeature(p[i], pd[i]);
 
+    std::cout << "DBG: task addFeature " << std::endl;
     // set the gain
     task.setLambda(0.8);
 
+    std::cout << "DBG: task setLambda " << std::endl;
     // Declaration of the robot
     vpSimulatorViper850 robot(opt_display);
+    std::cout << "DBG: vpSimulatorViper850 " << std::endl;
 
     // Initialise the robot and especially the camera
     robot.init(vpViper850::TOOL_PTGREY_FLEA2_CAMERA, vpCameraParameters::perspectiveProjWithoutDistortion);
+
+    std::cout << "DBG: after robot.init " << std::endl;
     robot.setRobotState(vpRobot::STATE_VELOCITY_CONTROL);
 
+    std::cout << "DBG: after robot.setRobotState " << std::endl;
     // Initialise the object for the display part
     robot.initScene(vpWireFrameSimulator::PLATE, vpWireFrameSimulator::D_STANDARD);
 
+    std::cout << "DBG: after robot.initScene " << std::endl;
     // Initialise the position of the object relative to the pose of the
     // robot's camera
     robot.initialiseObjectRelativeToCamera(cMo);
+    std::cout << "DBG: after robot.initialiseObjectRelativeToCamera " << std::endl;
 
     // Set the desired position (for the display part)
     robot.setDesiredCameraPosition(cdMo);
+    std::cout << "DBG: after robot.setDesiredCameraPosition " << std::endl;
 
     // Get the internal robot's camera parameters
     vpCameraParameters cam;
     robot.getCameraParameters(cam, Iint);
+    std::cout << "DBG: after robot.getCameraParameters " << std::endl;
 
     if (opt_display) {
       // Get the internal view
@@ -287,6 +307,7 @@ int main(int argc, const char **argv)
       vpDisplay::flush(Iint);
     }
 
+    std::cout << "DBG: after display Iint " << std::endl;
     // Display task information
     task.print();
 

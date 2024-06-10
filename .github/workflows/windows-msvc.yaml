@@ -53,7 +53,7 @@ jobs:
     - name: Build ViSP
       working-directory: ${{ github.workspace }}\build
       run: |
-        cmake --build . --config Release
+        cmake --build . --config Release -DBUILD_TESTS=OFF -DBUILD_TUTORIALS=OFF -DBUILD_DEMOS=OFF -DBUILD_APPS=OFF
 
     - name: Install ViSP
       working-directory: ${{ github.workspace }}\build
@@ -74,4 +74,5 @@ jobs:
         set PATH=%PATH%;${{ github.workspace }}\build\install\x64\vc17\bin
         echo "PATH: "
         echo %PATH%
-        ctest --output-on-failure -C Release -V
+        ctest -C Release -V -VV -R servoSimuAfma6FourPoints2DCamVelocity
+        ctest -C Release -V -VV -R servoSimuViper850FourPoints2DCamVelocity
