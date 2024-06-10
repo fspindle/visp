@@ -239,7 +239,7 @@ void vpSimulatorViper850::initDisplay()
 */
 void vpSimulatorViper850::init(vpViper850::vpToolType tool, vpCameraParameters::vpCameraParametersProjType proj_model)
 {
-  std::cout << "DBG4: begin vpSimulatorViper850::init()" << std::endl;
+  std::cout << "DBG4: begin vpSimulatorViper850::init(vpViper850::vpToolType tool, vpCameraParameters::vpCameraParametersProjType proj_model)" << std::endl;
   this->projModel = proj_model;
 
   // Use here default values of the robot constant parameters.
@@ -289,7 +289,7 @@ void vpSimulatorViper850::init(vpViper850::vpToolType tool, vpCameraParameters::
   // m_mutex_eMc.unlock();
   // std::cout << "DBG4: after m_mutex_eMc.unlock()" << std::endl;
   setToolType(tool);
-  std::cout << "DBG4: end vpSimulatorViper850::init()" << std::endl;
+  std::cout << "DBG4: end vpSimulatorViper850::init(vpViper850::vpToolType tool, vpCameraParameters::vpCameraParametersProjType proj_model)" << std::endl;
   return;
 }
 
@@ -534,6 +534,7 @@ void vpSimulatorViper850::updateArticularPosition()
 */
 void vpSimulatorViper850::compute_fMi()
 {
+  std::cout << "DBG5 begin vpSimulatorViper850::compute_fMi()" << std::endl;
   // vpColVector q = get_artCoord();
   vpColVector q(6); //; = get_artCoord();
   q = get_artCoord();
@@ -656,19 +657,22 @@ void vpSimulatorViper850::compute_fMi()
   fMit[6][1][3] = s1 * (c23 * (c4 * s5 * d6 - a3) + s23 * (c5 * d6 + d4) + a1 + a2 * c2) + c1 * s4 * s5 * d6;
   fMit[6][2][3] = s23 * (a3 - c4 * s5 * d6) + c23 * (c5 * d6 + d4) - a2 * s2 + d1;
 
-  // vpHomogeneousMatrix cMe;
-  // get_cMe(cMe);
-  // cMe = cMe.inverse();
-  // fMit[7] = fMit[6] * cMe;
-  m_mutex_eMc.lock();
+  std::cout << "DBG5 before vpViper::get_fMc(q, fMit[7])" << std::endl;
+    // vpHomogeneousMatrix cMe;
+    // get_cMe(cMe);
+    // cMe = cMe.inverse();
+    // fMit[7] = fMit[6] * cMe;
+    //m_mutex_eMc.lock();
   vpViper::get_fMc(q, fMit[7]);
-  m_mutex_eMc.unlock();
+  //m_mutex_eMc.unlock();
 
+  std::cout << "DBG5 after vpViper::get_fMc(q, fMit[7])" << std::endl;
   m_mutex_fMi.lock();
   for (int i = 0; i < 8; i++) {
     fMi[i] = fMit[i];
   }
   m_mutex_fMi.unlock();
+  std::cout << "DBG5 end vpSimulatorViper850::compute_fMi()" << std::endl;
 }
 
 /*!
