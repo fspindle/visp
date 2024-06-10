@@ -76,7 +76,7 @@ BEGIN_VISP_NAMESPACE
  * platforms, the libpthread third-party library need to be
  * installed. On Windows, we use the native threading capabilities.
  */
-class VISP_EXPORT vpRobotWireFrameSimulator : protected vpWireFrameSimulator, public vpRobotSimulator
+  class VISP_EXPORT vpRobotWireFrameSimulator : protected vpWireFrameSimulator, public vpRobotSimulator
 {
 public:
   vpImage<vpRGBa> I;
@@ -350,10 +350,11 @@ protected:
 
   vpColVector get_artCoord()
   {
-    m_mutex_artCoord.lock();
+    std::cout << "DBG6 begin get_artCoord()" << std::endl;
     vpColVector artCoordTmp(6);
+    std::lock_guard<std::mutex> guard(m_mutex_artCoord);
     artCoordTmp = artCoord;
-    m_mutex_artCoord.unlock();
+    std::cout << "DBG6 end get_artCoord()" << std::endl;
     return artCoordTmp;
   }
   void set_artCoord(const vpColVector &coord)
