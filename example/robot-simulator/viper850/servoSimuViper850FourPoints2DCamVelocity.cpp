@@ -175,12 +175,16 @@ bool getOptions(int argc, const char **argv, bool &click_allowed, bool &display)
 
 int main(int argc, const char **argv)
 {
+  std::cout << "Begin " << argv[0] << std::endl;
   std::mutex my_mutex;
   int var = 5;
+  std::cout << "Before lock()" << std::endl;
   my_mutex.lock();
   var = 6;
-  my_mutex.unlock();
   std::cout << "var: " << var << std::endl;
+  my_mutex.unlock();
+  std::cout << "After lock()" << std::endl;
+  std::cout << "End " << argv[0] << std::endl;
   return EXIT_SUCCESS;
 
   std::cout << "DBG: Start " << argv[0] << std::endl;
