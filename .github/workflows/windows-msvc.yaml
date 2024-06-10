@@ -24,6 +24,10 @@ jobs:
           - name: windows-latest
             os: windows-2022
 
+    env:
+      # Workaround for GitHub runner issue around std::mutex segfault (https://github.com/actions/runner-images/issues/10020)
+      DISABLE_CONSTEXPR_MUTEX_CONSTRUCTOR: true
+
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
