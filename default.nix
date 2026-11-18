@@ -78,7 +78,6 @@ stdenv.mkDerivation (finalAttrs: {
     libglvnd
     libjpeg
     libpng
-    librealsense
     libx11
     libxml2
     nlohmann_json
@@ -91,6 +90,7 @@ stdenv.mkDerivation (finalAttrs: {
   ]
   ++ lib.optionals stdenv.hostPlatform.isLinux [
     coin3d
+    librealsense
     libv4l
   ]
   ++ lib.optionals stdenv.cc.isClang [
